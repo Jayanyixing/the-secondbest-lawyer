@@ -1,0 +1,4 @@
+interface:
+  display_name: "the-secondbest-lawyer"
+  short_description: "北京民商事与刑事案件、合同顾问、尽调及律所标书工作，核验法律与案例依据"
+  default_prompt: "请使用 $the-secondbest-lawyer，按我提供的材料完成本次法律工作，并标明依据、资料缺口和下一步。"
