@@ -886,5 +886,38 @@
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
     "note": "类别：司法解释｜版本：2020-12-29（修正）｜LawRefBook 整理"
+  },
+  {
+    "file": "data/sources/lawrefbook/78-最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）.md",
+    "name": "最高人民法院关于审理建设工程施工合同纠纷案件适用法律问题的解释（一）",
+    "publish": "2020-12-29",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020-12-29｜45 条｜LawRefBook 整理"
+  },
+  {
+    "file": "data/sources/lawrefbook/79-最高人民法院关于民事执行中变更、追加当事人若干问题的规定.md",
+    "name": "最高人民法院关于民事执行中变更、追加当事人若干问题的规定",
+    "publish": "2020-12-29",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020-12-29｜35 条｜LawRefBook 整理"
+  },
+  {
+    "file": "data/sources/lawrefbook/80-最高人民法院关于适用《中华人民共和国民法典》有关担保制度的解释.md",
+    "name": "最高人民法院关于适用《中华人民共和国民法典》有关担保制度的解释",
+    "publish": "2020-12-31",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020-12-31｜71 条｜LawRefBook 整理"
   }
 ]
