@@ -38,7 +38,18 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2024年3月10日（修订）｜施行：2015年3月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2024年3月10日（修订）｜施行：2015年3月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/71-不动产登记暂行条例实施细则.md",
+    "name": "不动产登记暂行条例实施细则",
+    "publish": "2024-05-09",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：部门规章｜版本：2024年5月9日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/05-中华人民共和国专利法.md",
@@ -49,7 +60,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年10月17日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2020年10月17日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/23-中华人民共和国个人信息保护法.md",
@@ -60,7 +71,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2021年8月20日（通过）｜施行：2021年11月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2021年8月20日（通过）｜施行：2021年11月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/09-中华人民共和国产品质量法.md",
@@ -71,7 +82,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2018年12月29日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2018年12月29日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/26-中华人民共和国仲裁法.md",
@@ -82,7 +93,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2025年9月12日（修订）｜施行：2026年3月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2025年9月12日（修订）｜施行：2026年3月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/37-中华人民共和国企业破产法.md",
@@ -93,7 +104,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2006年8月27日｜施行：2007年6月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2006年8月27日｜施行：2007年6月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/39-中华人民共和国保险法.md",
@@ -104,7 +115,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2015年4月24日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2015年4月24日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/02-中华人民共和国信托法.md",
@@ -115,7 +126,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2001年4月28日（通过）｜施行：2001年10月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2001年4月28日（通过）｜施行：2001年10月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/35-中华人民共和国公司法.md",
@@ -126,7 +137,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2023年12月29日（修订）｜施行：2024年7月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2023年12月29日（修订）｜施行：2024年7月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/33-中华人民共和国刑事诉讼法.md",
@@ -137,7 +148,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2018年10月26日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2018年10月26日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/31-中华人民共和国刑法.md",
@@ -148,7 +159,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2023年12月29日（修正）｜施行：-｜现行有效（含刑法修正案（十二），该修正案自2024年3月1日起施行）｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2023年12月29日（修正）｜施行：-｜现行有效（含刑法修正案（十二），该修正案自2024年3月1日起施行）｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/25-中华人民共和国劳动争议调解仲裁法.md",
@@ -159,7 +170,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2007年12月29日（通过）｜施行：2008年5月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2007年12月29日（通过）｜施行：2008年5月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/27-中华人民共和国劳动合同法.md",
@@ -170,7 +181,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2012年12月28日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2012年12月28日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/47-劳动合同法实施条例.md",
@@ -181,7 +192,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2008年9月18日（公布）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2008年9月18日（公布）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/28-中华人民共和国劳动法.md",
@@ -192,7 +203,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2018年12月29日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2018年12月29日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/06-中华人民共和国反不正当竞争法.md",
@@ -203,7 +214,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2025年6月27日（修订）｜施行：2025年10月15日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2025年6月27日（修订）｜施行：2025年10月15日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/07-中华人民共和国反垄断法.md",
@@ -214,7 +225,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2022年6月24日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2022年6月24日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/36-中华人民共和国合伙企业法.md",
@@ -225,7 +236,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2006年8月27日（修订）｜施行：2007年6月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2006年8月27日（修订）｜施行：2007年6月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/04-中华人民共和国商标法.md",
@@ -236,7 +247,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年4月23日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2019年4月23日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/04B-中华人民共和国商标法（2026年修订·2027年1月1日施行）.md",
@@ -247,7 +258,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2026年6月26日（修订）｜施行：2027年1月1日｜尚未生效（2027年1月1日起施行）｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2026年6月26日（修订）｜施行：2027年1月1日｜尚未生效（2027年1月1日起施行）｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/18-中华人民共和国国家赔偿法.md",
@@ -258,7 +269,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2012年10月26日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2012年10月26日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/10-中华人民共和国土地管理法.md",
@@ -269,7 +280,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年8月26日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2019年8月26日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/11-中华人民共和国城市房地产管理法.md",
@@ -280,7 +291,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年8月26日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2019年8月26日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/21-中华人民共和国安全生产法.md",
@@ -291,7 +302,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2021年6月10日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2021年6月10日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/48-市场主体登记管理条例.md",
@@ -302,7 +313,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2021年7月27日｜施行：2022年3月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2021年7月27日｜施行：2022年3月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/12-中华人民共和国建筑法.md",
@@ -313,7 +324,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年4月23日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2019年4月23日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/13-中华人民共和国招标投标法.md",
@@ -324,7 +335,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2017年12月27日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2017年12月27日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/45-招标投标法实施条例.md",
@@ -335,7 +346,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年3月2日｜施行：2012年2月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2019年3月2日｜施行：2012年2月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/42-政府信息公开条例.md",
@@ -346,7 +357,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年4月3日（修订）｜施行：2019年5月15日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2019年4月3日（修订）｜施行：2019年5月15日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/14-中华人民共和国政府采购法.md",
@@ -357,7 +368,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2014年8月31日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2014年8月31日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/46-政府采购法实施条例.md",
@@ -368,7 +379,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2015年1月30日（公布）｜施行：2015年3月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2015年1月30日（公布）｜施行：2015年3月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/22-中华人民共和国数据安全法.md",
@@ -379,7 +390,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2021年6月10日（通过）｜施行：2021年9月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2021年6月10日（通过）｜施行：2021年9月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/32-中华人民共和国民事诉讼法.md",
@@ -390,7 +401,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2023年9月1日（第五次修正）｜施行：2024年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2023年9月1日（第五次修正）｜施行：2024年1月1日｜现行有效｜赣州市南康区人民检察院官网转载的 2023 年修正全文（https://www.ganzhounk.jcy.gov.cn/llyt/202309/t20230904_5919822.shtml），经逐条抽取核对"
   },
   {
     "file": "data/sources/lawrefbook/30-中华人民共和国民法典.md",
@@ -401,7 +412,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年5月28日（通过，2021年1月1日起施行）｜施行：2021年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2020年5月28日（通过，2021年1月1日起施行）｜施行：2021年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/08-中华人民共和国消费者权益保护法.md",
@@ -412,7 +423,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2013年10月25日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2013年10月25日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/20-中华人民共和国环境保护法.md",
@@ -423,7 +434,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2014年4月24日（修订）｜施行：2015年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2014年4月24日（修订）｜施行：2015年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/29-中华人民共和国社会保险法.md",
@@ -434,7 +445,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2018年12月29日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2018年12月29日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/38-中华人民共和国票据法.md",
@@ -445,7 +456,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2004年8月28日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2004年8月28日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/19-中华人民共和国税收征收管理法.md",
@@ -456,7 +467,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2015年4月24日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2015年4月24日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/24-中华人民共和国网络安全法.md",
@@ -467,7 +478,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2025年10月28日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2025年10月28日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/03-中华人民共和国著作权法.md",
@@ -478,7 +489,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年11月11日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2020年11月11日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/15-中华人民共和国行政处罚法.md",
@@ -489,7 +500,18 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2021年1月22日（修订）｜施行：2021年7月15日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2021年1月22日（修订）｜施行：2021年7月15日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/70-行政复议法实施条例.md",
+    "name": "中华人民共和国行政复议法实施条例",
+    "publish": "2026-04-29",
+    "effective": "2026-07-01",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：行政法规｜版本：2026年4月29日（修订）｜施行：2026年7月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/17-中华人民共和国行政强制法.md",
@@ -500,7 +522,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2011年6月30日（通过）｜施行：2012年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2011年6月30日（通过）｜施行：2012年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/16-中华人民共和国行政许可法.md",
@@ -511,7 +533,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年4月23日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2019年4月23日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/34-中华人民共和国行政诉讼法.md",
@@ -522,7 +544,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2017年6月27日（修正）｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2017年6月27日（修正）｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/01-中华人民共和国证券法.md",
@@ -533,7 +555,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年12月28日（修订）｜施行：2020年3月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：法律｜版本：2019年12月28日（修订）｜施行：2020年3月1日｜现行有效｜中国人大网「国家法律法规数据库」公开法律文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/41-道路交通安全法实施条例.md",
@@ -544,7 +566,40 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2017年10月7日｜施行：2004年5月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2017年10月7日｜施行：2004年5月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/75-北京市住房租赁条例.md",
+    "name": "北京市住房租赁条例",
+    "publish": "2022-05-25",
+    "effective": "2022-09-01",
+    "status": "现行有效",
+    "url": "https://www.beijing.gov.cn/zhengce/dfxfg/202208/W020230907640705064597.docx",
+    "channel": "用户提供（北京官方原件）",
+    "official_check": "已核",
+    "note": "类别：地方性法规｜版本：2022年5月25日（通过）｜施行：2022年9月1日｜现行有效｜北京市人民政府官网政策文件（Word 原件）｜https://www.beijing.gov.cn/zhengce/dfxfg/202208/W020230907640705064597.docx"
+  },
+  {
+    "file": "data/sources/lawrefbook/74-北京市物业管理条例.md",
+    "name": "北京市物业管理条例",
+    "publish": "2020-03-27",
+    "effective": "2020-05-01",
+    "status": "现行有效",
+    "url": "https://www.bjrd.gov.cn/rdzl/dfxfgdxb/202102/P020210223579626636123.pdf",
+    "channel": "用户提供（北京官方原件）",
+    "official_check": "已核",
+    "note": "类别：地方性法规｜版本：2020年3月27日（通过）｜施行：2020年5月1日｜现行有效｜北京市人大常委会《北京市地方性法规汇编》PDF 原件｜https://www.bjrd.gov.cn/rdzl/dfxfgdxb/202102/P020210223579626636123.pdf"
+  },
+  {
+    "file": "data/sources/lawrefbook/73-北京市生活垃圾管理条例.md",
+    "name": "北京市生活垃圾管理条例",
+    "publish": "2019-11-27",
+    "effective": "2020-05-01",
+    "status": "现行有效",
+    "url": "https://www.bjrd.gov.cn/xwzx/cwhgg/202012/t20201222_2172222.html",
+    "channel": "用户提供（北京官方原件）",
+    "official_check": "已核",
+    "note": "类别：地方性法规｜版本：2019年11月27日（修正）｜施行：2020年5月1日｜现行有效｜北京市人民代表大会常务委员会官网公告｜https://www.bjrd.gov.cn/xwzx/cwhgg/202012/t20201222_2172222.html"
   },
   {
     "file": "data/sources/lawrefbook/40-工伤保险条例.md",
@@ -555,7 +610,18 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2010年12月20日｜施行：2004年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2010年12月20日｜施行：2004年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/72-建设工程安全生产管理条例.md",
+    "name": "建设工程安全生产管理条例",
+    "publish": "2003-11-24",
+    "effective": "2004-02-01",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：行政法规｜版本：2003年11月24日（公布）｜施行：2004年2月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/44-建设工程质量管理条例.md",
@@ -566,7 +632,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2019年4月23日｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2019年4月23日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/62-执行异议和复议规定.md",
@@ -577,7 +643,18 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/67-查封扣押冻结财产规定.md",
+    "name": "最高人民法院关于人民法院民事执行中查封、扣押、冻结财产的规定",
+    "publish": "2020-12-29",
+    "effective": "2005-01-01",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：2005年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/61-劳动争议解释（一）.md",
@@ -588,7 +665,51 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：2021年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：2021年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/66-诉讼时效规定.md",
+    "name": "最高人民法院关于审理民事案件适用诉讼时效制度若干问题的规定",
+    "publish": "2020-12-29",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/65-民间借贷规定.md",
+    "name": "最高人民法院关于审理民间借贷案件适用法律若干问题的规定",
+    "publish": "2020-12-29",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/64-道路交通事故损害赔偿解释.md",
+    "name": "最高人民法院关于审理道路交通事故损害赔偿案件适用法律若干问题的解释",
+    "publish": "2020-12-29",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/69-公司法时间效力规定.md",
+    "name": "最高人民法院关于适用《中华人民共和国公司法》时间效力的若干规定",
+    "publish": "2024-06-29",
+    "effective": "2024-07-01",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2024年6月29日｜施行：2024年7月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/56-公司法解释（一）.md",
@@ -599,7 +720,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2014年2月20日｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2014年2月20日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/58-公司法解释（三）.md",
@@ -610,7 +731,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/57-公司法解释（二）.md",
@@ -621,7 +742,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/60-公司法解释（五）.md",
@@ -632,7 +753,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：2019年4月29日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：2019年4月29日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/59-公司法解释（四）.md",
@@ -643,7 +764,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：2017年9月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：2017年9月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/55-刑事诉讼法解释.md",
@@ -654,7 +775,18 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2021年1月26日｜施行：2021年3月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2021年1月26日｜施行：2021年3月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/68-执行程序若干问题的解释.md",
+    "name": "最高人民法院关于适用《中华人民共和国民事诉讼法》执行程序若干问题的解释",
+    "publish": "2020-12-29",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/54-民事诉讼法解释.md",
@@ -665,7 +797,18 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2022年4月1日｜施行：-｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2022年4月1日｜施行：-｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
+  },
+  {
+    "file": "data/sources/lawrefbook/63-民法典侵权责任编解释（一）.md",
+    "name": "最高人民法院关于适用《中华人民共和国民法典》侵权责任编的解释（一）",
+    "publish": "2024-09-25",
+    "effective": "2024-09-27",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2024年9月25日｜施行：2024年9月27日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/50-民法典合同编通则解释.md",
@@ -676,7 +819,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2023年12月4日｜施行：2023年12月5日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2023年12月4日｜施行：2023年12月5日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/53-民法典婚姻家庭编解释（一）.md",
@@ -687,7 +830,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：2021年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：2021年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/51-民法典总则编解释.md",
@@ -698,7 +841,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2022年2月24日｜施行：2022年3月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2022年2月24日｜施行：2022年3月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/52-民法典物权编解释（一）.md",
@@ -709,7 +852,7 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2020年12月29日｜施行：2021年1月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：司法解释｜版本：2020年12月29日｜施行：2021年1月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   },
   {
     "file": "data/sources/lawrefbook/49-诉讼费用交纳办法.md",
@@ -720,6 +863,6 @@
     "url": "https://flk.npc.gov.cn/",
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
-    "note": "版本：2006年12月19日（公布）｜施行：2007年4月1日｜现行有效｜LawRefBook 整理（据国家法律法规数据库）"
+    "note": "类别：行政法规｜版本：2006年12月19日（公布）｜施行：2007年4月1日｜现行有效｜中国人大网「国家法律法规数据库」公开文本整理（LawRefBook 开源法律库）"
   }
 ]

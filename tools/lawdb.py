@@ -388,9 +388,37 @@ def resolve_laws(conn, hint: str) -> list[str]:
     if rows:
         return rows
 
+    # 「公司法时间效力规定」这类：《法名》+ 主题词，允许跨书名号匹配
+    for i, ch in enumerate(hint):
+        if ch == "法" and len(hint) - i > 3:
+            a, b = hint[: i + 1], hint[i + 1:]
+            b = re.sub(r"(解释|规定|条例|办法|规则)$", "", b).strip()
+            if len(a) >= 2 and len(b) >= 2:
+                rows = q("SELECT name FROM laws WHERE name LIKE ? AND name LIKE ?", f"%{a}%", f"%{b}%")
+                if rows:
+                    return rows
+
+    # 去掉顿号/标点后再比一次（「查封扣押冻结」vs「查封、扣押、冻结」）
+    def strip_punct(x: str) -> str:
+        return re.sub(r"[、，,．.·\s]", "", x)
+
+    rows = q(
+        "SELECT name FROM laws WHERE replace(replace(replace(name,'、',''),'，',''),' ','') LIKE ?",
+        f"%{strip_punct(hint)}%",
+    )
+    if rows:
+        return rows
     if len(hint) >= 4:
-        return q("SELECT name FROM laws WHERE name LIKE ?", f"%{hint[:4]}%")
-    return []
+        rows = q("SELECT name FROM laws WHERE name LIKE ?", f"%{hint[:4]}%")
+        if rows:
+            return rows
+
+    # 最后一招：疑似度匹配，容忍「的」「、」等差异
+    import difflib
+
+    names = q("SELECT name FROM laws")
+    scored = sorted(((difflib.SequenceMatcher(None, hint, n).ratio(), n) for n in names), reverse=True)
+    return [scored[0][1]] if scored and scored[0][0] >= 0.45 else []
 
 
 def cmd_article(args) -> int:
