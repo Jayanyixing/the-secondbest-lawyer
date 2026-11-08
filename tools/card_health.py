@@ -112,11 +112,12 @@ def main(argv: list[str]) -> int:
     placeholders = conn.execute(
         "SELECT id, case_no, cause FROM cards WHERE trim(cause) IN (%s)"
         % ",".join("?" * len(PLACEHOLDER)), PLACEHOLDER).fetchall() if False else []
-    misplaced, missing, ok = [], [], 0
+    misplaced, missing, no_article, ok = [], [], [], 0
     for cid, no_, issues, holding, quote, kind in rows:
         m = CASE_RE.search((no_ or "").strip())
         if not m:
-            missing.append((cid, no_, "无法从 case_no 解析《法规》第X条"))
+            # 会议纪要、指导意见、典型案例本来就没有条号，不属于"校验失败"
+            no_article.append((cid, no_))
             continue
         law, art_no = m.group(1).strip(), m.group(2)
         law = law.strip("《》〈〉") if law.count("《") <= 1 else law.strip("《》")
@@ -169,6 +170,7 @@ def main(argv: list[str]) -> int:
     if args.json:
         print(json.dumps(dict(ok=ok, misplaced=misplaced, missing=missing,
                              conflicts=conflicts, placeholder=placeholder,
+                             no_article=no_article,
                              cause_mismatch=cause_mismatch, composite_cause=composite_cause,
                              overclaim=overclaim),
                          ensure_ascii=False, indent=2))
@@ -178,6 +180,10 @@ def main(argv: list[str]) -> int:
             print(f"\n条号错位 {len(misplaced)} 张（引文正确，条号写错——最隐蔽的一类）：")
             for cid, cno, hit in misplaced:
                 print(f"  ✗ #{cid} {cno}" + (f"  → 引文实为 {hit}" if hit else "  → 该法内未找到引文"))
+        if no_article:
+            names = "、".join(f"#{cid} {n[:24]}" for cid, n in no_article[:4])
+            more = f" 等 {len(no_article)} 张" if len(no_article) > 4 else ""
+            print(f"\n无条号（会议纪要／典型案例，不适用条号校验）：{names}{more}")
         if missing:
             print(f"\n无法校验 {len(missing)} 张：")
             for cid, cno, why in missing:

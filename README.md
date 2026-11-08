@@ -72,7 +72,7 @@ the-secondbest-lawyer/
     ├── case-access.md           案例检索选路与降级
     ├── case-mcp-setup.md        案例库 MCP 配置（含 Claude Code／Codex 写法）
     ├── codex-case-mcp.toml      配置样例
-    └── acceptance-scenarios.md  29 个试用与压力测试场景
+    └── acceptance-scenarios.md  34 个试用与压力测试场景
 ├── MAINTENANCE.md               半年一次复查＋触发式复查，带到期表
 ├── data/                        法条库、卡片库、manifest、版本风险表（cards.sqlite 不入库）
 └── tests/fixtures/              解析器测试数据
