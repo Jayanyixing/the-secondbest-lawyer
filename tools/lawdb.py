@@ -155,10 +155,20 @@ def parse_articles(text: str) -> list[dict]:
     if current:
         articles.append(current)
 
+    # 「第一百三十三条之一」这类独立条号：刑法修正案常用，不能并进基础条
+    out = []
     for a in articles:
+        m = re.match(r"^之([一二三四五六七八九十]+)[\s\u3000]*(.*)$", a["text"], re.S)
+        if m:
+            a = dict(a)
+            a["article_no"] = f"{a['article_no']}之{m.group(1)}"
+            a["text"] = m.group(2).strip()
+        out.append(a)
+
+    for a in out:
         a["text"] = re.sub(r"\n{2,}", "\n", a["text"]).strip()
         a["text"] = re.sub(r"[ \t\u3000]+", " ", a["text"])
-    return articles
+    return out
 
 
 # ---------------------------------------------------------------- 建库
@@ -352,6 +362,7 @@ ABBREV = {
     "刑诉法": "刑事诉讼法", "民诉法": "民事诉讼法", "行诉法": "行政诉讼法",
     "刑诉": "刑事诉讼法", "民诉": "民事诉讼法", "行诉": "行政诉讼法",
     "公司法解释": "公司法", "公司法规定": "公司法",
+    "道交": "道路交通事故", "建工": "建设工程", "执异": "执行异议",
 }
 
 

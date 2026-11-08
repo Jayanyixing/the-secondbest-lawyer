@@ -52,6 +52,9 @@ def main(argv: list[str]) -> int:
     ap.add_argument("official", type=Path, help="官方原件")
     ap.add_argument("local", type=Path, help="库内文本")
     ap.add_argument("--limit", type=int, default=10, help="最多列出多少处差异")
+    ap.add_argument("--only", help="只比这些条号，逗号分隔，如 第九条,第三十条")
+    ap.add_argument("--anchors", type=Path, help="锚点文件 anchors.json")
+    ap.add_argument("--law", help="锚点文件里的法名")
     args = ap.parse_args(argv)
 
     for p in (args.official, args.local):
@@ -61,6 +64,25 @@ def main(argv: list[str]) -> int:
 
     a, a_nums = load(args.official)
     b, b_nums = load(args.local)
+
+    only = None
+    if args.anchors:
+        import json
+
+        anchors = json.loads(args.anchors.read_text(encoding="utf-8"))
+        if args.law:
+            only = anchors.get(args.law)
+        else:
+            only = next((v for k, v in anchors.items() if k in str(args.local) or k in str(args.official)), None)
+        if not only:
+            print(f"锚点文件里没有找到对应条目：{args.law or '自动匹配失败'}", file=sys.stderr)
+            return 2
+    if args.only:
+        only = [x.strip() for x in args.only.split(",") if x.strip()]
+    if only:
+        a = {k: v for k, v in a.items() if k in only}
+        b = {k: v for k, v in b.items() if k in only}
+        print(f"抽查模式：{len(only)} 个锚点条号")
     print(f"A（官方）：{len(a)} 条，最大 {a_nums[-1] if a_nums else 0}")
     print(f"B（库内）：{len(b)} 条，最大 {b_nums[-1] if b_nums else 0}")
 
