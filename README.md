@@ -215,6 +215,7 @@ PDF_PATH=/path/判决书.pdf OUT_PATH=/tmp/j.txt osascript -l JavaScript tools/o
 | 案号须脱敏且合格式 | 真实案号（年份＋法院代字＋类型＋数字号）必须保留 X/＊ 遮罩；**来源编号**（指导案例、典型案例、公报案例、入库编号）不要求遮罩，保留序号以维持区分度 |
 | 同案号+同争点不重复 | 批次内和库内双向查；重复默认跳过，`--replace` 覆盖 |
 | 摘录核验状态 | `verify_status` 列，默认 `pending`；回原文比对后 `card-verify` 改 `verified` |
+| `kind` | `judgment`（判例卡，`case_no` 为真实案号或典型案例编号）／`rule`（规则卡，`case_no` 为《法规名》或会议纪要/指导意见名称）。规则卡不要求遮罩 |
 | `our_side` 口径 | **本卡适用于哪一方**（我方在同类案件中所处位置），不是原审诉讼地位。可填诉讼地位（原告／被告）或角色（劳动者／用人单位／承包人／发包人） |
 
 `source` 统一写「来源名｜URL｜抓取日期」，单张卡片自带可核验信息，不依赖外部清单。
@@ -222,6 +223,7 @@ PDF_PATH=/path/判决书.pdf OUT_PATH=/tmp/j.txt osascript -l JavaScript tools/o
 ```bash
 lawdb.py card-query 施工 --status verified   # 只看已回原文核过的
 lawdb.py card-query 施工 --status pending    # 只看待核
+lawdb.py card-query 质量 --kind rule         # 只看规则卡（会议纪要/司法解释类）
 ```
 
 从判决书抽卡的顺序与反例见 [`templates/card-extraction.md`](templates/card-extraction.md)。
