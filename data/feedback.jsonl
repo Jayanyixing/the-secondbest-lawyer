@@ -1,0 +1,3 @@
+{"date": "2026-11-09", "type": "miss", "query": "追加 被执行人", "card": "", "case": "", "note": "79号卡入库前的空召回，已由规则卡修复"}
+{"date": "2026-11-09", "type": "wrong_citation", "query": "", "card": "108", "case": "", "note": "1198 卡 key_point 多出「须以向第三人主张不能为前提」"}
+{"date": "2026-11-09", "type": "unusable", "query": "", "card": "19", "case": "", "note": "公报案例卡 pending，无法引用"}
