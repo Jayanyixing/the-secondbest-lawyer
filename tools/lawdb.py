@@ -532,7 +532,8 @@ def validate_card(c: dict) -> list[str]:
             errs.append(f"案号未脱敏：{no}（真实案号须保留 X 或 ＊ 作遮罩）")
     side = str(c.get("our_side") or "").strip()
     if side and side not in ("原告", "被告", "第三人", "上诉人", "被上诉人", "申请人", "被申请人",
-                             "再审申请人", "被申请人（再审）", "辩护人", "被害人代理", "其他"):
+                             "再审申请人", "被申请人（再审）", "辩护人", "被害人代理",
+                             "劳动者", "用人单位", "承包人", "发包人", "买受人", "出卖人", "其他"):
         errs.append(f"立场取值不规范：{side}")
     return errs
 
