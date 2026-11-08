@@ -620,28 +620,56 @@ def cmd_card_add(args) -> int:
     return 0
 
 
+def load_synonyms() -> dict:
+    f = ROOT / "data" / "card-synonyms.txt"
+    syn = {}
+    if not f.exists():
+        return syn
+    for line in f.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        syn[k.strip()] = [x.strip() for x in v.split(",") if x.strip()]
+    return syn
+
+
+def expand(word: str, syn: dict) -> list[str]:
+    return [word] + [x for x in syn.get(word, []) if x != word]
+
+
 def cmd_card_query(args) -> int:
     conn = open_db(args.db)
     ensure_cards_schema(conn)
+    words = args.keyword if isinstance(args.keyword, list) else [args.keyword]
+    kw = " ".join(words)
+    syn = load_synonyms()
+    groups = [expand(w, syn) for w in words]
+    match_expr = " AND ".join("(" + " OR ".join(f'"{x}"' for x in g) + ")" for g in groups if g)
     try:
-        if too_short(args.keyword):
+        if any(too_short(w) for w in words):
             raise sqlite3.OperationalError("short")
         rows = conn.execute(
             """SELECT c.case_no,c.cause,c.issues,c.holding,c.key_point,c.quote,c.source,c.created_at,c.verify_status,c.kind
                FROM cards_fts f JOIN cards c ON c.id=f.rowid
                WHERE cards_fts MATCH ? AND (? = '' OR c.verify_status = ?) AND (? = '' OR c.kind = ?)
                ORDER BY bm25(cards_fts) LIMIT ?""",
-            (args.keyword, args.status or "", args.status or "", getattr(args,"kind",None) or "", getattr(args,"kind",None) or "", args.limit),
+            (match_expr, args.status or "", args.status or "", getattr(args,"kind",None) or "", getattr(args,"kind",None) or "", args.limit),
         ).fetchall()
+        if not rows:
+            raise sqlite3.OperationalError("fts-empty")
     except sqlite3.OperationalError:
-        rows = conn.execute(
-            """SELECT case_no,cause,issues,holding,key_point,quote,source,created_at,verify_status,kind FROM cards
-               WHERE (cause LIKE ? OR issues LIKE ? OR key_point LIKE ? OR quote LIKE ?)
-                 AND (? = '' OR verify_status = ?) AND (? = '' OR kind = ?) LIMIT ?""",
-            tuple([f"%{args.keyword}%"] * 4 + [args.status or "", args.status or "", getattr(args,"kind",None) or "", getattr(args,"kind",None) or "", args.limit]),
-        ).fetchall()
+        blob = ("coalesce(cause,'')||coalesce(issues,'')||coalesce(holding,'')"
+                "||coalesce(key_point,'')||coalesce(quote,'')||coalesce(tags,'')")
+        conds = " AND ".join("(" + " OR ".join([f"{blob} LIKE ?"] * len(g)) + ")" for g in groups)
+        sql = ("SELECT case_no,cause,issues,holding,key_point,quote,source,created_at,verify_status,kind "
+               f"FROM cards WHERE {conds} AND (? = '' OR verify_status = ?) AND (? = '' OR kind = ?) LIMIT ?")
+        params = [f"%{x}%" for g in groups for x in g] + [args.status or "", args.status or "",
+                                              getattr(args, "kind", None) or "", getattr(args, "kind", None) or "",
+                                              args.limit]
+        rows = conn.execute(sql, params).fetchall()
     if not rows:
-        print(f"未命中卡片：{args.keyword}")
+        print(f"未命中卡片：{kw}")
         return 1
     for r in rows:
         print(f"\n【{r[1] or '-'}】{r[0] or '未记案号'}（{r[7]}）〔{r[8] or 'pending'}｜{r[9] or 'judgment'}〕")
@@ -810,7 +838,8 @@ def main(argv: list[str]) -> int:
     ca.set_defaults(func=cmd_card_add)
 
     cq = sub.add_parser("card-query", help="检索卡片")
-    cq.add_argument("keyword"); cq.add_argument("--limit", type=int, default=5)
+    cq.add_argument("keyword", nargs="+", help="一个或多个关键词（自动 AND）")
+    cq.add_argument("--limit", type=int, default=5)
     cq.add_argument("--status", choices=["verified", "pending"], help="只看已核／待核")
     cq.add_argument("--kind", choices=["judgment", "rule"], help="只看判例卡／规则卡")
     cq.set_defaults(func=cmd_card_query)
