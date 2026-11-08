@@ -1,5 +1,25 @@
 # 变更记录
 
+## 2026-11-08（v2.2.0）三层数据供给落地
+
+### L1 本地法条库（新）
+
+- 新增 `tools/lawdb.py`：`init / import / query / article / stats / verify` 六个命令，SQLite FTS5 trigram 中文检索，中文数字条号排序，导入即记录来源 URL、日期与 sha256。
+- 支持 `.txt/.md/.html/.docx/.pdf`；docx 直接解 zip+XML，不依赖 python-docx；pdf 用系统 `pdftotext`。
+- `verify` 比对磁盘文件哈希——回读校验的机器版本，文件被改动立刻报警。
+- 新增 `tests/fixtures/sample-law.txt` 验证切条与检索链路（样例文本，非法律原文）。
+- 附带 `tests/fixtures` 与 `.gitignore` 规则：库文件不入库。
+
+### L2／L3 明确分工
+
+- 新增 `references/data-supply.md`：三层顺序 L1→L2→L3→待取正文，各层成本、合规边界、更新节奏。
+- SKILL.md 与 01 模块加入「先查本地库」硬规则；checklist 增加本地库引用必须带导入日期与哈希。
+- `MAINTENANCE.md` 增加本地库季度复查与 `lawdb verify` 用法。
+
+### 为什么不做爬虫
+
+实测结果写进文档：`flk.npc.gov.cn` 的旧 API 已改为前端渲染（所有路径返回同一 SPA），法院转载站直接 403，最高法公报 502。批量抓取不稳定也不合规，改为「律师下载一次、本地长期复用」。
+
 ## 2026-11-08（v2.1.0）补齐五个短板
 
 ### 1. 引用从「可追溯」推到「可证伪」

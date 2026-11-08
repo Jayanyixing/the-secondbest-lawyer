@@ -30,6 +30,7 @@ REFS = SKILL_DIR / "references"
 FULL_ORDER = [
     "SKILL.md",
     "citation.md",
+    "data-supply.md",
     "scope.md",
     "00-chief.md",
     "01-legal-research.md",

@@ -2,3 +2,6 @@
 __MACOSX/
 __pycache__/
 *.pyc
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm

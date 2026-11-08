@@ -24,6 +24,7 @@
 | references/07-assets-enforcement.md 保全担保与执行 | 6 | 2026-11-08 | 2027-05-08 |
 | references/05-contract-counsel.md 条款与合规 | 6 | 2026-11-08 | 2027-05-08 |
 | references/11-client-practice.md 收费与授权 | 6 | 2026-11-08 | 2027-05-08 |
+| data/law.sqlite 本地法条库版本 | 3 | 2026-11-08 | 2027-02-08 |
 | references/case-access.md 工具与渠道 | 3 | 2026-11-08 | 2027-02-08 |
 | references/case-mcp-setup.md MCP 地址与命令 | 3 | 2026-11-08 | 2027-02-08 |
 
@@ -34,6 +35,15 @@
 3. 若改动涉及引用规则或期限口径，同步更新 `citation.md` 与 `checklist.md`，并跑一次 `tools/build.py` 重新生成单文件版。
 4. 有评测数据时，改完重跑受影响案件的分数，对比改前改后——**没有对比就不算改进**。
 5. 更新本表对应的“上次核实”和“下次到期”。
+
+## 本地法条库更新
+
+```bash
+python3 tools/lawdb.py verify     # 导出文件被改动／替换会报警
+python3 tools/lawdb.py stats      # 看已导入哪些法规、导入日期
+```
+
+重大修法施行前必须重新导入同名条目（脚本按法名覆盖），并把引用了旧条的交付物标为需复核。
 
 ## 到期检查
 
