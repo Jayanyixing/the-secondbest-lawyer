@@ -875,5 +875,16 @@
     "channel": "用户提供（LawRefBook 整理）",
     "official_check": "未核",
     "note": "类别：司法解释｜版本：2026年5月6日｜施行：2026年6月30日｜现行有效｜LawRefBook 整理｜关联：与 64 号主解释（2020 修正）并列适用、非替代关系"
+  },
+  {
+    "file": "data/sources/lawrefbook/77-最高人民法院关于审理买卖合同纠纷案件适用法律问题的解释.md",
+    "name": "最高人民法院关于审理买卖合同纠纷案件适用法律问题的解释",
+    "publish": "2020-12-29",
+    "effective": "",
+    "status": "现行有效",
+    "url": "https://flk.npc.gov.cn/",
+    "channel": "用户提供（LawRefBook 整理）",
+    "official_check": "未核",
+    "note": "类别：司法解释｜版本：2020-12-29（修正）｜LawRefBook 整理"
   }
 ]
