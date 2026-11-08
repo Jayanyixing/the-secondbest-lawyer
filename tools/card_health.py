@@ -39,6 +39,9 @@ TAG2CAUSE = {
     "合同": "合同纠纷", "商品房": "商品房预售合同纠纷",
 }
 
+# 语义越界的可疑措辞：条文里没有的前提，key_point 却写成硬条件
+OVERCLAIM = ("必须以", "须以", "一律", "均须", "前提是", "必然", "一定")
+
 CASE_RE = re.compile(r"^(.*?)(第[零〇一二三四五六七八九十百千两\d]+条(?:之[一二三四五六七八九十]+)?)$")
 ART_PREFIX_RE = re.compile(r"^第[零〇一二三四五六七八九十百千两\d]+条(?:之[一二三四五六七八九十]+)?[\s\u3000]*")
 
@@ -143,6 +146,13 @@ def main(argv: list[str]) -> int:
         if want and cause and want not in cause and cause not in want:
             cause_mismatch.append((cid, cause[:18], first, want))
 
+    overclaim = []
+    for cid, kp in conn.execute("SELECT id, key_point FROM cards WHERE kind='rule'"):
+        for w in OVERCLAIM:
+            if w in (kp or ""):
+                overclaim.append((cid, w, (kp or "")[:40]))
+                break
+
     placeholder = [r for r in conn.execute(
         "SELECT id, case_no, cause FROM cards WHERE trim(cause) IN ('见 tags','见tags','待定','TODO','TBD')")]
     # 「无法校验」是信息不是错误（如会议纪要没有条号），只有真问题才返回非零
@@ -151,7 +161,7 @@ def main(argv: list[str]) -> int:
     if args.json:
         print(json.dumps(dict(ok=ok, misplaced=misplaced, missing=missing,
                              conflicts=conflicts, placeholder=placeholder,
-                             cause_mismatch=cause_mismatch),
+                             cause_mismatch=cause_mismatch, overclaim=overclaim),
                          ensure_ascii=False, indent=2))
     else:
         print(f"规则卡 {len(rows)} 张：条号与引文一致 {ok} 张")
@@ -163,6 +173,10 @@ def main(argv: list[str]) -> int:
             print(f"\n无法校验 {len(missing)} 张：")
             for cid, cno, why in missing:
                 print(f"  ? #{cid} {cno} | {why}")
+        if overclaim:
+            print(f"\n提示：key_point 出现绝对化表述 {len(overclaim)} 张（需核条文是否真有该前提）：")
+            for cid, w, kp in overclaim[:8]:
+                print(f"  ? #{cid} 「{w}」 {kp}")
         if cause_mismatch:
             print(f"\n提示：案由比标签更具体或需核对 {len(cause_mismatch)} 张（不是错误）：")
             for cid, cause, tag, want in cause_mismatch[:12]:
