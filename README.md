@@ -212,7 +212,7 @@ PDF_PATH=/path/判决书.pdf OUT_PATH=/tmp/j.txt osascript -l JavaScript tools/o
 |---|---|
 | 九字段必填 | case_no / cause / issues / holding / our_side / key_point / quote / source / tags |
 | 摘录 8–60 字 | 必须是原文，概述不算 |
-| 案号须脱敏且合格式 | 「（年份）…号」，且保留 X / ＊ 遮罩 |
+| 案号须脱敏且合格式 | 真实案号（年份＋法院代字＋类型＋数字号）必须保留 X/＊ 遮罩；**来源编号**（指导案例、典型案例、公报案例、入库编号）不要求遮罩，保留序号以维持区分度 |
 | 同案号+同争点不重复 | 批次内和库内双向查；重复默认跳过，`--replace` 覆盖 |
 
 从判决书抽卡的顺序与反例见 [`templates/card-extraction.md`](templates/card-extraction.md)。

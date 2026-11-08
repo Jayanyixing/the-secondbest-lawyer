@@ -496,6 +496,8 @@ CASE_NO_RE = re.compile(
     r")$"
 )
 MASK_RE = re.compile(r"[XxＸｘ＊*]")
+# 来源编号（典型案例、指导案例、入库编号）不是真实案号，不涉及个人信息，无须遮罩
+SOURCE_ID_RE = re.compile(r"典型案例|指导案例|指导性案例|公报案例|入库编号|参考案例")
 
 
 def validate_card(c: dict) -> list[str]:
@@ -505,10 +507,13 @@ def validate_card(c: dict) -> list[str]:
     if quote and not 8 <= len(quote) <= 60:
         errs.append(f"摘录长度 {len(quote)} 字（要求 8–60，必须是原文，概述不算）")
     no = str(c.get("case_no") or "").strip()
-    if no and not CASE_NO_RE.match(no):
-        errs.append(f"案号格式不符：{no}（应为「（年份）…号」）")
-    if no and not MASK_RE.search(no):
-        errs.append(f"案号未脱敏：{no}（须保留 X 或 ＊ 作遮罩）")
+    if no:
+        if SOURCE_ID_RE.search(no):
+            pass  # 来源编号放行：保留 01/02 等序号，检索才有区分度
+        elif not CASE_NO_RE.match(no):
+            errs.append(f"案号格式不符：{no}（应为「（年份）…号」或来源编号）")
+        elif not MASK_RE.search(no):
+            errs.append(f"案号未脱敏：{no}（真实案号须保留 X 或 ＊ 作遮罩）")
     side = str(c.get("our_side") or "").strip()
     if side and side not in ("原告", "被告", "第三人", "上诉人", "被上诉人", "申请人", "被申请人",
                              "再审申请人", "被申请人（再审）", "辩护人", "被害人代理", "其他"):
