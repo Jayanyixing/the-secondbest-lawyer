@@ -24,6 +24,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LAW_DB = ROOT / "data" / "law.sqlite"
 
+# tags 首项 → 应有案由；用于一致性检查
+TAG2CAUSE = {
+    "建工": "建设工程施工合同纠纷", "工程": "建设工程施工合同纠纷",
+    "买卖": "买卖合同纠纷", "消费": "买卖合同纠纷",
+    "劳动": "劳动争议", "工伤": "劳动争议", "新业态": "劳动争议",
+    "竞业": "竞业限制纠纷", "公司": "公司纠纷", "股权": "公司纠纷",
+    "担保": "担保纠纷", "保证": "保证合同纠纷", "抵押": "担保纠纷",
+    "执行": "执行程序", "破产": "破产纠纷",
+    "商标": "知识产权纠纷", "专利": "知识产权纠纷",
+    "著作权": "知识产权纠纷", "知产": "知识产权纠纷",
+    "侵权": "侵权责任纠纷", "租赁": "房屋租赁合同纠纷",
+    "借贷": "民间借贷纠纷", "保险": "保险纠纷",
+    "合同": "合同纠纷", "商品房": "商品房预售合同纠纷",
+}
+
 CASE_RE = re.compile(r"^(.*?)(第[零〇一二三四五六七八九十百千两\d]+条(?:之[一二三四五六七八九十]+)?)$")
 ART_PREFIX_RE = re.compile(r"^第[零〇一二三四五六七八九十百千两\d]+条(?:之[一二三四五六七八九十]+)?[\s\u3000]*")
 
@@ -121,13 +136,22 @@ def main(argv: list[str]) -> int:
             if a[2] == b[2] and norm(a[3])[:20] != norm(b[3])[:20]:
                 conflicts.append((a[0], b[0], a[2][:32]))
 
+    cause_mismatch = []
+    for cid, cause, tags in conn.execute("SELECT id, cause, tags FROM cards"):
+        first = (tags or "").split(",")[0].strip()
+        want = TAG2CAUSE.get(first)
+        if want and cause and want not in cause and cause not in want:
+            cause_mismatch.append((cid, cause[:18], first, want))
+
     placeholder = [r for r in conn.execute(
         "SELECT id, case_no, cause FROM cards WHERE trim(cause) IN ('见 tags','见tags','待定','TODO','TBD')")]
     # 「无法校验」是信息不是错误（如会议纪要没有条号），只有真问题才返回非零
+    # 案由比标签更具体（分包 vs 施工合同、商品房预售 vs 买卖）是合理的，只作提示
     problems = len(misplaced) + len(conflicts) + len(placeholder)
     if args.json:
         print(json.dumps(dict(ok=ok, misplaced=misplaced, missing=missing,
-                             conflicts=conflicts, placeholder=placeholder),
+                             conflicts=conflicts, placeholder=placeholder,
+                             cause_mismatch=cause_mismatch),
                          ensure_ascii=False, indent=2))
     else:
         print(f"规则卡 {len(rows)} 张：条号与引文一致 {ok} 张")
@@ -139,6 +163,10 @@ def main(argv: list[str]) -> int:
             print(f"\n无法校验 {len(missing)} 张：")
             for cid, cno, why in missing:
                 print(f"  ? #{cid} {cno} | {why}")
+        if cause_mismatch:
+            print(f"\n提示：案由比标签更具体或需核对 {len(cause_mismatch)} 张（不是错误）：")
+            for cid, cause, tag, want in cause_mismatch[:12]:
+                print(f"  ! #{cid} tags[{tag}] 应为「{want}」，现为「{cause}」")
         if placeholder:
             print(f"\n占位值 {len(placeholder)} 张（cause 不是案由）：")
             for cid, cno, cause in placeholder:
