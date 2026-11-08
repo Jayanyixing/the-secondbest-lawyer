@@ -48,16 +48,18 @@ the-secondbest-lawyer/
 ├── agents/openai.yaml           Codex 可选适配层
 └── references/
     ├── 00-chief.md              受理、优先级、整合
-    ├── scope.md                 范围外业务与转介
+    ├── scope.md                 11 类范围外业务与转介
     ├── 01-legal-research.md     规范与类案检索、核验表、待取正文表
     ├── citation.md              引用可追溯机制（最高优先级）
+    ├── data-supply.md           三层数据供给：本地库 → 授权检索 → 人工导出
     ├── 02-civil-litigation.md   请求权基础、管辖五步、请求写法、金额口径
     ├── 03-criminal-defense.md   分阶段工作、辩护要点检查表
     ├── 04-evidence-trial.md     大材料索引协议、证据矩阵、质证与庭审
     ├── 05-contract-counsel.md   交易闭环、条款清单、执业合规提示
     ├── 06-corporate-due-diligence.md  尽调、否定性结论写法
     ├── 07-assets-enforcement.md 线索、保全、执行、扩张主体
-    ├── 08-law-firm-tender.md    响应矩阵、报价、递交检查
+    ├── 08-law-firm-tender.md    投标全流程、无效投标七类、落标救济时限
+    ├── 08a-legal-service-bid.md 法律服务采购：方案十节、团队与证明、报价、评分拆解
     ├── 09-case-operations.md    期限三档、期限类型全表、公开联络
     ├── 10-legal-quality.md      自查／有限复核／独立复核
     ├── 11-client-practice.md    会谈、预期管理、收费与授权、调解授权、结案沉淀
@@ -65,22 +67,33 @@ the-secondbest-lawyer/
     ├── 13-procedure-actions.md  立案→保全→审理→上诉→执行的动作与材料清单、紧急模式
     ├── checklist.md             交付前总闸
     ├── handoff.md               交接卡（文本版＋JSON 版）
+    ├── eval-protocol.md         10 例回溯盲评、6 维 0–3 分
     ├── sources.md               官方入口与受限处理
     ├── case-access.md           案例检索选路与降级
     ├── case-mcp-setup.md        案例库 MCP 配置（含 Claude Code／Codex 写法）
     ├── codex-case-mcp.toml      配置样例
     └── acceptance-scenarios.md  29 个试用与压力测试场景
 ├── MAINTENANCE.md               半年一次复查＋触发式复查，带到期表
-├── data/                        本地法条库（law.sqlite，不入库）
-├── tests/fixtures/              解析器测试数据
-templates/                       起诉状／证据目录／风险告知书 的 JSON 样例
+├── data/                        法条库、卡片库、manifest、版本风险表（cards.sqlite 不入库）
+└── tests/fixtures/              解析器测试数据
+templates/                       文书 JSON 样例、取卡模板与批次、弃卡清单、检索验收题
 tools/
-├── lawdb.py                     本地法条库＋结案卡片：导入／检索／按条取文／哈希校验／card
+├── lawdb.py                     法条库＋结案卡片：导入／检索／按条取文／哈希校验／card-*
 ├── citation_lint.py             引用校验器（15 条规则）
-├── build.py                     生成单文件版与技能包
+├── card_health.py               条号错位、跨卡矛盾、占位值、cause↔tags 一致性
+├── feedback.py / improve.py     失败信号记录与改进提案（只提不改库）
+├── retrieval_check.py           检索验收回归（data/retrieval-cases.json）
+├── lawdiff.py                   官方件 vs 库内文本逐条比对
+├── ocr_pdf.js                   扫描件 OCR（macOS Vision，约 1–2 秒/页）
 ├── docgen.py                    直出 docx（起诉状／证据目录／风险告知书，零依赖）
+├── build.py                     生成单文件版与技能包
 ├── eval_score.py                评测分数汇总
-└── review_due.py                复查到期检查
+├── review_due.py                复查到期检查
+├── tender_matrix.py             采购文件 → 响应矩阵
+├── tender_consistency.py        标书形式一致性（C1–C6）
+├── tender_score.py              评分测算与降价边际
+├── tender_credits.py            业绩匹配与缺口
+└── test_tender.py               投标工具回归测试（7 项断言）
 eval/                            评测模板：case-card / scoring CSV
 dist/                            构建产物（单文件 lite/full + zip）
 ```
@@ -139,21 +152,21 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 
 技能不附带数据库权限，所以数据分三层取，顺序写死：**L1 本地库 → L2 授权检索 → L3 人工导出 → 待取正文**。
 
-**L1 本地法条库**（离线、毫秒级、零查询费）。仓库自带 **80 部、8897 条**（法律 43、行政法规 12、司法解释 20、部门规章 1、北京地方性法规 3），民法典全 1260 条、刑法 452 条、民诉法解释 550 条、刑诉法解释 655 条，条号逐部校验过连续性（版本分档见 [`data/VERSION-RISK.md`](data/VERSION-RISK.md)）。**但这是检索索引，不是引用底稿**——转载件版本未经核验，引用前必须回读官方原文。其中 **6 部为官方原件（已核）**：3 部人大网当期法律 + 3 部北京地方性法规；其余 73 部为带版本日期的整理件（未核，引用前须回读官方原文）：
+**L1 本地法条库**（离线、毫秒级、零查询费）。仓库自带 **84 部、9081 条**：法律 42、司法解释与规定 20、行政法规 12、部门规章等其他 7、北京地方性法规 3。含民法典全 1260 条、刑法 505 条（「之N」条号已拆分，查第 133 条之一得到危险驾驶）、民诉法 306 条、刑诉法 308 条、公司法 266 条、建工与买卖合同司法解释、劳动争议与劳动合同法、担保制度解释等。条号逐部校验过连续性（版本分档见 [`data/VERSION-RISK.md`](data/VERSION-RISK.md)）。
+
+**这是检索索引，不是引用底稿。** 6 部为官方原件（已核：3 部人大网当期法律 + 3 部北京地方性法规），78 部为带版本日期的整理件（未核）。整理件用于定位与比对，正式文书引用前必须回读官方原文——这条与引用规则是同一条，不是两套标准。
 
 ```bash
 python3 tools/lawdb.py seed                   # 按 data/manifest.json 批量入库
-python3 tools/lawdb.py query 公告期间          # 中文全文检索（FTS5 trigram）
-python3 tools/lawdb.py stats
-python3 tools/lawdb.py verify                 # 比对磁盘文件哈希，被改动即报警
+python3 tools/lawdb.py query 公告期间 期限     # 中文全文检索（FTS5 trigram，多词 AND）
+python3 tools/lawdb.py article 中华人民共和国民法典 第五百八十五条
+python3 tools/lawdb.py stats                  # 部数、条数、按部明细
+python3 tools/lawdb.py verify                 # 比对磁盘文件哈希（当前 84/84 一致）
 
 # 加一部法：文件丢进 data/sources/，manifest.json 加一条，再 seed
 python3 tools/lawdb.py import 民法典.docx --name 中华人民共和国民法典 \
     --issuer 全国人民代表大会 --publish 2020-05-28 --effective 2021-01-01 \
     --url https://flk.npc.gov.cn/... --official-check 已核
-python3 tools/lawdb.py query 违约金 调整      # 中文全文检索（FTS5 trigram）
-python3 tools/lawdb.py article 中华人民共和国民法典 第五百八十五条
-python3 tools/lawdb.py verify                 # 比对磁盘文件哈希，被改动即报警
 ```
 
 数据**不做爬虫**：官方站点普遍反爬（实测 `flk` 接口已改为前端渲染、法院转载站 403），批量抓取既不稳也不合规。做法是律师从官方下载页取 Word／HTML／PDF 一次，本地长期复用。支持的格式：`.txt/.md/.html/.docx/.pdf`。
@@ -192,6 +205,15 @@ python3 tools/tender_consistency.py 标书/ --anonymous
 `tender_matrix.py` 按 6 字片段重合率标「已应答／弱匹配／未找到」，未覆盖条目单列；分类靠关键词，必有误判，**以采购文件和评标办法原文为准，工具只保证不漏条**。
 
 `tender_consistency.py` 查的是形式矛盾：大写金额与数字对不上、投标总价在不同文件里不同、同一截止时间两个日期、Word 属性里残留作者名。金额是否合理、业绩是否真实仍要人判断。
+
+报价与业绩也能算：
+
+```bash
+python3 tools/tender_score.py 自评.json                    # 三种价格分算法、对手排名、降价边际
+python3 tools/tender_credits.py --need 3 --years 2023-2026 --keyword 顾问
+```
+
+`tender_score.py` 只按采购文件写的公式算：最低价法、基准价法、固定价满分。超限价直接判无效并返回非零。它回答的是「再让 5% 换几分」——这个数几乎总是小于让掉的利润，比感觉可靠。对手报价是假设，不等于中标概率。
 
 业绩素材单独存 `data/credits.json`（样例见 `data/credits.example.json`），每条记可披露范围与授权状态；投标时按采购要求匹配，输出「可用／需授权／不可用」——缺口由匹配算出，而不是临时回忆该不该编。
 
@@ -244,6 +266,8 @@ lawdb.py card-query 施工 --status pending    # 只看待核
 lawdb.py card-query 质量 --kind rule         # 只看规则卡（会议纪要/司法解释类）
 ```
 
+当前本地库 **98 张**：判例卡 50（49 已核 ＋ 1 张公报案例待核）、规则卡 48（全部已核）。公开的 `data/cards.json` 为 **93 张**，与本地库已分叉——**不要用公开版回灌覆盖本地库**。
+
 从判决书抽卡的顺序与反例见 [`templates/card-extraction.md`](templates/card-extraction.md)。
 
 ## 评测：跑过才有分数
@@ -258,6 +282,19 @@ python3 tools/eval_score.py eval/scores.csv
 
 目前**没有跑过任何一例**，所以本仓库不提供准确率数字。谁跑完，分数才算数。
 
+## 自检：改完先跑一遍
+
+```bash
+python3 tools/test_tender.py          # 投标四件套回归，7/7
+python3 tools/retrieval_check.py      # 卡片检索回归，8/8
+python3 tools/card_health.py          # 条号错位、跨卡矛盾、占位值、cause↔tags 一致性
+python3 tools/lawdb.py verify         # 法条文件哈希，84/84
+```
+
+`card_health.py` 会把每张卡的摘录放回它自称的条文里比对：摘录字对但条号错，它就报出来。这条检查逮到过真错误（民诉法解释终本恢复曾引 517 条第二款而非 519 条）。
+
+失败信号记 `data/feedback.jsonl`（`tools/feedback.py`），`tools/improve.py` 只聚类出提案，**不自动改库**。
+
 ## 维护
 
 - 常规：每 6 个月复查；触发式：新法施行、程序法修订、官方入口迁移、实战中出现错引。
@@ -267,7 +304,8 @@ python3 tools/eval_score.py eval/scores.csv
 ## 已知局限
 
 - 格式、内部链接、校验器、法条库、构建与到期脚本已实测；**未做真实案件准确率评测**（见上节）。
-- 本地法条库 80 部、8897 条，覆盖民法典、刑法、三大诉讼法、公司法、劳动、知产、行政、数据合规；**不包含司法解释与地方文件**。整理件（未核）在正式文书引用前须按 `citation.md` 回读官方原文。
+- 本地法条库 84 部、9081 条，覆盖民法典、刑法、三大诉讼法、公司法、劳动、建工、担保、破产、知产、行政与数据合规，含 20 部司法解释与规定；**不含北京以外的地方性文件，部门规章仅 7 部**。78 部为整理件（未核），正式文书引用前须按 `citation.md` 回读官方原文。
+- 卡片库 98 张全部来自已办案件与公开典型案例，**只能证明「这一案这样判」，不证明跨案结论**；`pending` 卡不可引用。
 - 法条条号与数值一律现场核，技能内不写死条文内容——避免技能自己制造错误引用。
 - 行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税、涉外等属范围外，只给边界与最小辅助，见 [`scope.md`](the-secondbest-lawyer/references/scope.md)。
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。
