@@ -255,6 +255,23 @@ python3 tools/eval_score.py eval/scores.csv
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。
 - 正式成果由承办律师结合原始材料与实际委托复核。
 
+## 仓库性质
+
+**私有工作区**，不是公开项目。含真实案件的卡片、快照、检索报告都在这里，按内部资料管理。
+
+因此：
+
+- `data/cards.json` 中有 4 张判例卡的 `quote` 是判决原文，含当事人姓名——逐字摘录，**不改**；
+- 邀请协作者时按内部授权把握，等同于把案件材料交给对方。
+
+**若将来要开源**，先做三件事：
+
+1. 移除 `data/cards.json`、`templates/snapshots/`、`templates/cards.batch*.json`、`templates/coverage.md`；
+2. 检查 `reports/` 下所有检索报告；
+3. 用 `card-export` 生成脱敏版再决定要不要带卡片。
+
+`data/law.sqlite`、`data/sources/` 是公开法律文本，可以保留。
+
 ## 许可
 
 [MIT](LICENSE)。
