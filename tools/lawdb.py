@@ -201,7 +201,8 @@ CARDS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS cards (
   id INTEGER PRIMARY KEY,
   case_no TEXT, cause TEXT, issues TEXT, holding TEXT, our_side TEXT,
-  key_point TEXT, source TEXT, quote TEXT, tags TEXT, created_at TEXT
+  key_point TEXT, source TEXT, quote TEXT, tags TEXT, created_at TEXT,
+  verify_status TEXT DEFAULT 'pending'
 );
 CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
   cause, issues, holding, key_point, quote, content='cards', content_rowid='id', tokenize='trigram'
@@ -213,6 +214,16 @@ CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
   article_no, text, content='articles', content_rowid='id', tokenize='trigram'
 );
 """
+
+
+def ensure_cards_schema(conn: sqlite3.Connection) -> None:
+    """补 verify_status 列（老库升级用），并保证 FTS 存在。"""
+    conn.executescript(CARDS_SCHEMA)
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(cards)").fetchall()]
+    if "verify_status" not in cols:
+        conn.execute("ALTER TABLE cards ADD COLUMN verify_status TEXT DEFAULT 'pending'")
+        conn.execute("UPDATE cards SET verify_status='pending' WHERE verify_status IS NULL")
+        conn.commit()
 
 
 def open_db(path: Path) -> sqlite3.Connection:
@@ -524,7 +535,7 @@ def validate_card(c: dict) -> list[str]:
 def cmd_card_add(args) -> int:
     """登记结案卡片。整批校验通过才入库；重复（同案号+同争点）跳过。"""
     conn = open_db(args.db)
-    conn.executescript(CARDS_SCHEMA)
+    ensure_cards_schema(conn)
 
     if args.file:
         data = json.loads(Path(args.file).read_text(encoding="utf-8"))
@@ -569,11 +580,12 @@ def cmd_card_add(args) -> int:
                 continue
             conn.execute("DELETE FROM cards WHERE id=?", (exists[0],))
         conn.execute(
-            """INSERT INTO cards(case_no,cause,issues,holding,our_side,key_point,source,quote,tags,created_at)
-               VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            """INSERT INTO cards(case_no,cause,issues,holding,our_side,key_point,source,quote,tags,created_at,verify_status)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
             (r.get("case_no"), r.get("cause"), r.get("issues"), r.get("holding"), r.get("our_side"),
              r.get("key_point"), r.get("source"), r.get("quote"), r.get("tags"),
-             r.get("created_at") or date.today().isoformat()),
+             r.get("created_at") or date.today().isoformat(),
+             r.get("verify_status") or "pending"),
         )
         inserted += 1
     conn.commit()
@@ -588,18 +600,19 @@ def cmd_card_add(args) -> int:
 
 def cmd_card_query(args) -> int:
     conn = open_db(args.db)
+    ensure_cards_schema(conn)
     try:
         if too_short(args.keyword):
             raise sqlite3.OperationalError("short")
         rows = conn.execute(
-            """SELECT c.case_no,c.cause,c.issues,c.holding,c.key_point,c.quote,c.source,c.created_at
+            """SELECT c.case_no,c.cause,c.issues,c.holding,c.key_point,c.quote,c.source,c.created_at,c.verify_status
                FROM cards_fts f JOIN cards c ON c.id=f.rowid
                WHERE cards_fts MATCH ? ORDER BY bm25(cards_fts) LIMIT ?""",
             (args.keyword, args.limit),
         ).fetchall()
     except sqlite3.OperationalError:
         rows = conn.execute(
-            """SELECT case_no,cause,issues,holding,key_point,quote,source,created_at FROM cards
+            """SELECT case_no,cause,issues,holding,key_point,quote,source,created_at,verify_status FROM cards
                WHERE cause LIKE ? OR issues LIKE ? OR key_point LIKE ? OR quote LIKE ? LIMIT ?""",
             tuple([f"%{args.keyword}%"] * 4 + [args.limit]),
         ).fetchall()
@@ -607,7 +620,7 @@ def cmd_card_query(args) -> int:
         print(f"未命中卡片：{args.keyword}")
         return 1
     for r in rows:
-        print(f"\n【{r[1] or '-'}】{r[0] or '未记案号'}（{r[7]}）")
+        print(f"\n【{r[1] or '-'}】{r[0] or '未记案号'}（{r[7]}）〔{r[8] or 'pending'}〕")
         if r[2]: print(f"  争点：{r[2]}")
         if r[3]: print(f"  裁判：{r[3]}")
         if r[4]: print(f"  我方要点：{r[4]}")
@@ -616,14 +629,34 @@ def cmd_card_query(args) -> int:
     return 0
 
 
+def cmd_card_verify(args) -> int:
+    """把卡片的摘录核验状态置为 verified / pending。"""
+    conn = open_db(args.db)
+    ensure_cards_schema(conn)
+    sql = "SELECT id FROM cards WHERE case_no LIKE ?"
+    params = [f"%{args.case_no}%"]
+    if args.issues:
+        sql += " AND issues LIKE ?"
+        params.append(f"%{args.issues}%")
+    ids = [r[0] for r in conn.execute(sql, params).fetchall()]
+    if not ids:
+        print("没有匹配的卡片")
+        return 1
+    conn.executemany("UPDATE cards SET verify_status=? WHERE id=?", [(args.status, i) for i in ids])
+    conn.commit()
+    print(f"已把 {len(ids)} 张卡片标记为 {args.status}")
+    return 0
+
+
 def cmd_card_list(args) -> int:
     conn = open_db(args.db)
+    ensure_cards_schema(conn)
     conn.executescript(CARDS_SCHEMA)
-    rows = conn.execute("SELECT case_no,cause,key_point,created_at FROM cards ORDER BY id DESC LIMIT ?",
+    rows = conn.execute("SELECT case_no,cause,key_point,created_at,verify_status FROM cards ORDER BY id DESC LIMIT ?",
                         (args.limit,)).fetchall()
     print(f"卡片 {conn.execute('SELECT COUNT(*) FROM cards').fetchone()[0]} 张")
     for r in rows:
-        print(f"  - {r[1] or '-'}｜{r[0] or '未记案号'}｜{(r[2] or '')[:30]}｜{r[3]}")
+        print(f"  - [{r[4] or 'pending'}] {r[1] or '-'}｜{r[0] or '未记案号'}｜{(r[2] or '')[:30]}｜{r[3]}")
     return 0
 
 
@@ -724,6 +757,12 @@ def main(argv: list[str]) -> int:
     cq = sub.add_parser("card-query", help="检索卡片")
     cq.add_argument("keyword"); cq.add_argument("--limit", type=int, default=5)
     cq.set_defaults(func=cmd_card_query)
+
+    cv = sub.add_parser("card-verify", help="标记摘录核验状态")
+    cv.add_argument("--case-no", required=True, help="案号（支持模糊匹配）")
+    cv.add_argument("--issues", help="限定争点关键词")
+    cv.add_argument("--status", choices=["verified", "pending"], default="verified")
+    cv.set_defaults(func=cmd_card_verify)
 
     cl = sub.add_parser("card-list", help="卡片列表")
     cl.add_argument("--limit", type=int, default=10)
