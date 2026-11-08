@@ -8,3 +8,4 @@ templates/BULK-GENERATION-PROMPT.md
 data/cards.full.sqlite
 reports/
 data/credits.json
+eval/sealed/

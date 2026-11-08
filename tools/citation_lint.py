@@ -56,7 +56,15 @@ DEADLINE_WORDS = ["截止", "期限", "届满", "上诉期", "答辩期", "举�
 DATE_RE = re.compile(r"\d{4}\s*[-/年]\s*\d{1,2}\s*[-/月]\s*\d{1,2}\s*日?|\d{4}-\d{2}-\d{2}")
 CASE_NO_RE = re.compile(r"[（(]\s*(?:19|20)\d{2}\s*[）)][^\s，。；：、（）()]{2,32}?号")
 GUIDE_NO_RE = re.compile(r"指导案例\s*\d+\s*号|入库编号\s*[\w\-]{4,}")
-TAG_RE = re.compile(r"[\[〔【]\s*([NCM]-\d{1,3})\s*[\]〕】]")
+TAG_RE = re.compile(r"[\[〔【]\s*([NCM]-\d{1,3})\s*[\]〕】]|(?<![\w\-])([NCM]-\d{1,3})(?![\w\-])")
+
+
+def find_tags(line: str) -> list[str]:
+    """取出引用标签：〔N-01〕与裸写 N-01 两种写法都认。"""
+    out = []
+    for m in TAG_RE.finditer(line):
+        out.append(m.group(1) or m.group(2))
+    return out
 PLACEHOLDER_RE = re.compile(r"[（(]\s*(?:[XxｘＸ]{2,}|20[XxｘＸ]{2}|\d{2}[XxｘＸ]{2})\s*[）)][^\n]{0,30}?号")
 TODO_SECTION_RE = re.compile(r"待取|线索|待补|待核")
 
@@ -140,6 +148,79 @@ def load_ledger_md(path: Path) -> list[dict]:
     return entries
 
 
+
+INLINE_ID_RE = re.compile(r"([NCSM])\s*-\s*(\d{1,3})")
+
+
+def load_ledger_inline(path: Path) -> list[dict]:
+    """从交付物自身的表格里读底稿行（编号列写成 N-01 / 〔N-01〕 即可）。
+
+    用于「底稿直接附在文书末尾、没有单独 ledger 文件」的常规写法：
+    只要有 N-/C-/S-/M- 编号，就按行构造条目，缺的字段留空。
+    """
+    lines = path.read_text(encoding="utf-8").splitlines()
+    entries: list[dict] = []
+    header: list[str] | None = None
+    for line in lines + [""]:
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            header = None
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if all(set(c) <= set("-: ") for c in cells):
+            continue
+        ident = None
+        id_at = 0
+        for i, c in enumerate(cells):
+            m = INLINE_ID_RE.search(c.strip())
+            if m:
+                ident = f"{m.group(1)}-{int(m.group(2)):02d}"
+                id_at = i
+                break
+        if ident is None:
+            header = cells if header is None else header
+            continue
+        rest = [c for i, c in enumerate(cells) if i != id_at]
+        quote = ""
+        read_scope = "unknown"
+        for c in rest:
+            if "摘录" in c or "原文" in c:
+                pass
+            if len(c) >= 8 and not re.match(r"^(摘录来自|未回读|已回读|待取)", c) and not quote:
+                quote = c
+            if "摘录来自" in c:
+                read_scope = "excerpt"
+        id_cell = cells[id_at].strip()
+        bare = re.fullmatch(r"[〔\[（(]?[NCSM]\s*-\s*\d{1,3}[〕\]）)]?", id_cell)
+        label = (rest[0] if rest else "") if bare else id_cell
+        num = ""
+        mg = GUIDE_NO_RE.search(label)
+        if mg:
+            num = mg.group(0)
+        else:
+            mc = CASE_NO_RE.search(label)
+            if mc:
+                num = mc.group(0)
+        entries.append(
+            {
+                "id": ident,
+                "type": "",
+                "number": num,
+                "name": rest[0] if rest else "",
+                "court": "",
+                "date": "",
+                "channel": "unknown",
+                "location": "",
+                "read_scope": read_scope,
+                "quote": quote,
+                "reread": "",
+                "official_check": "unknown",
+                "effectiveness": "unknown",
+                "inline": True,
+            }
+        )
+    return entries
+
 def load_ledger(path: Path) -> list[dict]:
     if path.suffix.lower() == ".json":
         return load_ledger_json(path)
@@ -172,12 +253,18 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
     doc_norm = norm_quote(text)
 
     ledger = load_ledger(ledger_path) if ledger_path else []
+    if not ledger:
+        ledger = load_ledger_inline(body_path)
+        if ledger:
+            rep.warn("R0", f"未指定 --ledger，已从文书内表格读到底稿 {len(ledger)} 条（字段不全，只做编号与摘录检查）")
     by_id = {e["id"]: e for e in ledger if e.get("id")}
     known_numbers = {norm(e["number"]) for e in ledger if e.get("number")}
     used_ids: dict[str, list[int]] = {}
 
     # R2 底稿字段完整性
     for entry in ledger:
+        if entry.get("inline"):
+            continue
         missing = [f for f in REQUIRED_FIELDS if not str(entry.get(f, "")).strip() or entry.get(f) in (None, "unknown")]
         if missing:
             rep.error("R2", f"底稿 {entry.get('id', '?')} 缺字段：{', '.join(missing)}")
@@ -205,7 +292,7 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
                 rep.error("R1", f"第 {idx} 行案例编号未登记：{match.group(0)}")
 
         # 引用标签
-        for tag in TAG_RE.findall(line):
+        for tag in find_tags(line):
             used_ids.setdefault(tag, []).append(idx)
             entry = by_id.get(tag)
             if entry is None:
@@ -225,7 +312,7 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
             if not in_todo and entry.get("read_scope") in QUOTE_SCOPES and not quote:
                 rep.error("R11", f"第 {idx} 行引用的 [{tag}] 缺少原文摘录（摘录必填，概述不算）")
 
-            if quote:
+            if quote and not entry.get("inline"):
                 q = norm_quote(quote)
                 # R13 摘录过短或套话
                 if len(q) < 8:
@@ -242,7 +329,9 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
                         rep.error("R12", f"第 {idx} 行引用的摘录在全文找不到：{quote[:24]}…")
 
             # R15 用于结论的条目应已回读
-            if entry.get("read_scope") in QUOTE_SCOPES and not in_todo:
+            if entry.get("inline"):
+                pass
+            elif entry.get("read_scope") in QUOTE_SCOPES and not in_todo:
                 if not str(entry.get("reread") or "").startswith("已回读"):
                     msg = f"第 {idx} 行引用的 [{tag}] 未回读原文（交付前应回读并记录日期）"
                     rep.error("R15", msg) if strict else rep.warn("R15", msg)
