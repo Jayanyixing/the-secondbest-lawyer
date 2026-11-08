@@ -51,7 +51,7 @@ the-secondbest-lawyer/
 
 技能规定了国家法律法规数据库、中国裁判文书网、人民法院案例库及北京官方来源的使用方式，并要求核对法律适用时点、具体条款、案例差异与原始出处。
 
-会员案例库可走三条路径。已有网页会员时，先按订阅条款导出允许使用的关键文书，让 Skill 做对照和引文核验。已获授权且平台允许辅助浏览时，可使用指定的已登录会话。高频检索可考虑供应商的官方 MCP 或 API，由管理员核对接口套餐、全文权限及额度。[案例检索接入与降级](the-secondbest-lawyer/references/case-access.md)
+已提供北大法宝和威科先行官方 MCP 的接入配置，任选一家即可。威科先行用自己的账号确认 OAuth 授权，北大法宝使用自己账号签发的 Token。配置后在新会话中指定供应商和案号或脱敏争点，Skill 会调用已授权的案例工具。连接失败或拿不到正文时，可以上传按许可导出的判决书继续分析。[账号授权指南](the-secondbest-lawyer/references/case-mcp-setup.md) · [Codex 配置样例](the-secondbest-lawyer/references/codex-case-mcp.toml) · [判决书备用流程](the-secondbest-lawyer/references/case-access.md)
 
 检索受限时，审合同会继续交付能从原文判断的风险与修订。专门查类案时，会交付可复制的检索词、筛选条件和应补的正文。商业库中的裁判全文可注明来源后用于分析，官方复核状态单列。
 

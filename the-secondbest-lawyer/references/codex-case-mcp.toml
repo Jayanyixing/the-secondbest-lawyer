@@ -1,0 +1,12 @@
+# Merge only the provider blocks you intend to use into Codex's MCP configuration.
+# Keep one block per server name. Configure secrets through your client.
+
+[mcp_servers.wk-case-search]
+url = "https://mcp.wkinfo.com.cn/mcp-servers/case/"
+# OAuth uses the user's Wolters Kluwer account.
+# For application credentials instead, uncomment the following line and supply the variable to the client.
+# bearer_token_env_var = "WK_MCP_TOKEN"
+
+[mcp_servers.pkulaw-case-keyword]
+url = "https://apim-gateway.pkulaw.com/mcp-case"
+bearer_token_env_var = "PKULAW_MCP_TOKEN"
