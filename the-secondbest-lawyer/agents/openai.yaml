@@ -1,4 +1,4 @@
 interface:
   display_name: "the-secondbest-lawyer"
-  short_description: "北京民商事与刑事案件、合同顾问、尽调及律所标书工作，核验法律与案例依据"
-  default_prompt: "请使用 $the-secondbest-lawyer，直接处理我在本轮提供的材料，先交付能完成的成果，再列需要补查的依据或资料。"
+  short_description: "中国大陆（默认北京）律师实务：民商诉讼与仲裁、刑事辩护、合同顾问、尽调、执行与律所标书；法条与案例引用须可追溯到原文"
+  default_prompt: "请使用 $the-secondbest-lawyer，直接处理我在本轮提供的材料：先交付能完成的成果，再列需要补查的依据或资料。所有法条与案例请标明来源、定位（页／段／小节）和读取范围。"

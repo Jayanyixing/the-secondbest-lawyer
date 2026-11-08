@@ -1,0 +1,3 @@
+case_id,case_type,d1_facts,d2_citations,d3_time,d4_risk,d5_usability,d6_boundary,blocker,notes
+C01,civil,3,2,3,2,2,2,0,类案只读到摘要
+C02,criminal,2,3,2,2,2,3,0,

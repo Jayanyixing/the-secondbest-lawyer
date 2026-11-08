@@ -1,0 +1,32 @@
+[
+  {
+    "file": "data/sources/中华人民共和国检察公益诉讼法.txt",
+    "name": "中华人民共和国检察公益诉讼法",
+    "issuer": "全国人民代表大会常务委员会",
+    "url": "http://www.npc.gov.cn/npc/c2/c30834/202611/t20261106_458538.html",
+    "official_check": "已核",
+    "channel": "官方页面",
+    "fetched_at": "2026-11-08",
+    "note": "示例语料：用于验证导入链路"
+  },
+  {
+    "file": "data/sources/中华人民共和国南极活动与环境保护法.txt",
+    "name": "中华人民共和国南极活动与环境保护法",
+    "issuer": "全国人民代表大会常务委员会",
+    "url": "http://www.npc.gov.cn/npc/c2/c30834/202611/t20261106_458555.html",
+    "official_check": "已核",
+    "channel": "官方页面",
+    "fetched_at": "2026-11-08",
+    "note": "示例语料：用于验证导入链路"
+  },
+  {
+    "file": "data/sources/中华人民共和国反跨境腐败法.txt",
+    "name": "中华人民共和国反跨境腐败法",
+    "issuer": "全国人民代表大会常务委员会",
+    "url": "http://www.npc.gov.cn/npc/c2/c30834/202611/t20261106_458563.html",
+    "official_check": "已核",
+    "channel": "官方页面",
+    "fetched_at": "2026-11-08",
+    "note": "示例语料：用于验证导入链路"
+  }
+]
