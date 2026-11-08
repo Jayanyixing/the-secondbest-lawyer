@@ -202,7 +202,7 @@ python3 tools/lawdb.py card-query 验收
 PDF_PATH=/path/判决书.pdf OUT_PATH=/tmp/j.txt osascript -l JavaScript tools/ocr_pdf.js
 ```
 
-约 1–2 秒/页，中文识别可用；OCR 有错字，**摘录必须回原图核对**后再入库。
+约 1–2 秒/页，中文识别可用；OCR 有错字，**摘录必须回原图核对**后再入库——实测 15 张卡里就有 1 张因 OCR 漏字而摘录失真（`荣誉称号具体理由` 漏了「的」）。
 
 ### 入库校验
 
