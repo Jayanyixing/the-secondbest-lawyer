@@ -296,6 +296,12 @@ def cmd_import(args) -> int:
     return 0
 
 
+def _caveat(check: str) -> str:
+    if (check or "") == "已核":
+        return ""
+    return ("  ⚠ 检索索引：版本日期已标注但未与官方原件逐字比对，引用前须按 citation.md 回读官方原文")
+
+
 def cmd_query(args) -> int:
     words = args.keyword if isinstance(args.keyword, list) else [args.keyword]
     keyword = " ".join(words)
@@ -338,8 +344,7 @@ def cmd_query(args) -> int:
         body = args.chars if hasattr(args, "chars") else 300
         print(text[: body] + ("…" if len(text) > body else ""))
         print(f"  来源：{url or '未记录'}｜导入：{fetched}｜官方复核：{check or '未核'}")
-        if (check or "") != "已核":
-            print("  ⚠ 转载件：版本未经核验，仅作检索索引；引用前必须打开官方原文回读（见 citation.md）")
+        print(_caveat(check))
     return 0
 
 
@@ -359,8 +364,7 @@ def cmd_article(args) -> int:
         print(f"【{law}】{no}" + (f"  〔{heading}〕" if heading else ""))
         print(text)
         print(f"\n来源：{url or '未记录'}｜导入：{fetched}｜复核：{check}｜公布：{pub or '-'}｜施行：{eff or '-'}")
-        if (check or "") != "已核":
-            print("⚠ 转载件：版本未经核验，仅作检索索引；引用前必须打开官方原文回读（见 citation.md）")
+        print(_caveat(check))
     return 0
 
 
