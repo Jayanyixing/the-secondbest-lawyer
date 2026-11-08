@@ -50,7 +50,7 @@ def docx_meta(path: Path) -> dict:
             return {}
     out = {}
     for key in ("creator", "lastModifiedBy", "title", "company"):
-        m = re.search(rf"<{key}[^>]*>(.*?)</{key}>", xml, re.S)
+        m = re.search(rf"<(?:[A-Za-z]+:)?{key}[^>]*>(.*?)</(?:[A-Za-z]+:)?{key}>", xml, re.S)
         if m and m.group(1).strip():
             out[key] = m.group(1).strip()
     return out
@@ -207,6 +207,64 @@ def check_file(path: Path, text: str, f: Findings, price_index: dict) -> None:
             f.add("提示", "C3", f"「{lab}」出现不同日期：{detail}", where_prefix)
 
 
+TOTAL_LABELS = ("合计", "总计", "总价", "合计金额", "总金额")
+SUBTOTAL_LABELS = ("小计",)
+NUM_CELL = re.compile(r"^[¥￥]?\s*([0-9][0-9,，]*(?:\.[0-9]{1,2})?)\s*(万元|万|元)?$")
+
+
+def parse_money_cell(cell: str) -> float | None:
+    m = NUM_CELL.match(cell.strip().replace(" ", ""))
+    if not m:
+        return None
+    return num_to_yuan(m.group(1), m.group(2) or "元")
+
+
+def check_table_totals(path: Path, text: str, f: Findings) -> None:
+    """表格里「合计」应等于各分项之和。只查 markdown 管道表。"""
+    block: list[list[str]] = []
+    start_line = 0
+
+    def flush() -> None:
+        nonlocal block, start_line
+        if len(block) >= 3:
+            rows = [[c.strip() for c in r] for r in block]
+            numeric = [i for i in range(max(len(r) for r in rows))
+                       if sum(1 for r in rows if i < len(r) and parse_money_cell(r[i]) is not None) >= 2]
+            if numeric:
+                col = numeric[-1]
+                items, totals = [], []
+                for r in rows:
+                    if col >= len(r) or parse_money_cell(r[col]) is None:
+                        continue
+                    label = r[0]
+                    value = parse_money_cell(r[col])
+                    if any(k in label for k in TOTAL_LABELS):
+                        totals.append((label, value))
+                    elif not any(k in label for k in SUBTOTAL_LABELS):
+                        items.append((label, value))
+                if items and totals:
+                    total_label, total_value = totals[-1]
+                    s = sum(v for _, v in items)
+                    if abs(s - total_value) > 0.01:
+                        f.add("错误", "C6",
+                              f"「{total_label}」{total_value:.2f} 与分项之和 {s:.2f} 不符（差 {total_value - s:+.2f}）",
+                              f"{path.name}:{start_line}")
+        block, start_line = [], 0
+
+    for lineno, line in enumerate(text.splitlines(), 1):
+        st = line.strip()
+        if st.startswith("|") and st.count("|") >= 2:
+            cells = [c for c in st.strip("|").split("|")]
+            if all(set(c) <= set("-: ") for c in cells if c):
+                continue
+            if not block:
+                start_line = lineno
+            block.append(cells)
+        else:
+            flush()
+    flush()
+
+
 def check_meta(path: Path, f: Findings, anonymous: bool) -> None:
     meta = docx_meta(path)
     if not meta:
@@ -236,6 +294,7 @@ def main(argv: list[str]) -> int:
     price_index: dict[str, list[tuple[float, str, int]]] = {}
     for path, text in pairs:
         check_file(path, text, f, price_index)
+        check_table_totals(path, text, f)
         if path.suffix.lower() in DOCX_SUFFIX:
             check_meta(path, f, args.anonymous)
 

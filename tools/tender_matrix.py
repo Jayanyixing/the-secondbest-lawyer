@@ -79,11 +79,24 @@ def classify(line: str) -> str:
     return "其他"
 
 
+TABLE_SEP = re.compile(r"^\|?[\s:|-]+\|?$")
+
+
 def extract(path: Path) -> list[dict]:
     text = read_text(path)
+    lines = text.splitlines()
     rows: list[dict] = []
-    for lineno, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip().lstrip("-*>|# ").strip()
+    for idx, raw in enumerate(lines):
+        lineno = idx + 1
+        stripped = raw.strip()
+        if TABLE_SEP.match(stripped) and "-" in stripped:
+            continue
+        is_table = stripped.count("|") >= 2
+        if is_table and idx + 1 < len(lines) and TABLE_SEP.match(lines[idx + 1].strip()) and "-" in lines[idx + 1]:
+            continue  # 表头行
+        line = stripped.lstrip("-*#> ").strip()
+        if is_table:
+            line = re.sub(r"\s*\|\s*", "　", line).strip("　 ")
         if len(line) < 12 or len(line) > 400:
             continue
         if re.match(r"^第[一二三四五六七八九十百]+[章节]", line) and len(line) <= 40:
@@ -175,11 +188,16 @@ def main(argv: list[str]) -> int:
         if args.out:
             print(f"矩阵骨架已写入 {args.out}")
         if body_files:
-            print(f"未在正文找到对应：{len(missing)} 条（重合率<{args.min_score}）")
+            weak = [r for r in rows if r["覆盖"] == "弱匹配"]
+            print(f"未在正文找到对应：{len(missing)} 条（重合率<0.15）；另有弱匹配 {len(weak)} 条（0.15–{args.min_score}）")
             for r in missing[:10]:
                 print(f"  - {r['文件']}:{r['行号']} {r['要求原文'][:60]}")
             if len(missing) > 10:
                 print(f"  ……另有 {len(missing) - 10} 条，见 CSV")
+            if weak:
+                print("弱匹配（可能只是表述不同，需人工确认）：")
+                for r in weak[:5]:
+                    print(f"  ~ {r['文件']}:{r['行号']} {r['要求原文'][:50]}（{r['重合率']}）")
         else:
             print("未给 --body，跳过覆盖检查")
         print("提示：分类靠关键词，实质性／评分项以采购文件与评标办法原文为准。")
