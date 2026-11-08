@@ -1,7 +1,7 @@
 ---
 name: the-secondbest-lawyer
 description: "中国大陆（默认北京）律师实务：民商事诉讼与仲裁、刑事辩护与刑事文书、合同审改与常年顾问、企业信息与法律尽调、财产保全与执行、律所投标；所有法条与案例引用必须可追溯到实际读到的原文。用于需要核验依据、梳理案卷或交付律师业务成果的任务。行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税测算、涉外法意见等属于范围外（见 references/scope.md）。Mainland China legal practice: civil and commercial litigation, criminal defense, contract review, due diligence, enforcement, tenders, with every citation traceable to source text."
-version: 2.4.1
+version: 2.5.0
 author: Jayan
 license: MIT
 platforms: [macos, linux, windows]
@@ -65,6 +65,7 @@ metadata:
 | 审查已有成果、交付诉讼稿、重大合同、尽调或标书 | [10 质量核验](references/10-legal-quality.md) | 同版正文、原材料、引用底稿 |
 | 首次会谈、费用与授权、进度沟通、调解授权、结案报告 | [11 客户沟通与结案](references/11-client-practice.md) | 策略在 02／03 |
 | 国标／行标／团标检索、产品质量与验收标准、标准适用争议 | [12 标准检索](references/12-standards.md) | 合同场景回 05，诉讼回 02 |
+| 立案、保全、开庭、上诉、执行的具体动作与材料清单 | [13 程序动作](references/13-procedure-actions.md) | 期限用 09，证据用 04 |
 
 查案例时另读[检索接入与降级](references/case-access.md)，优先用本会话已授权的北大法宝或威科先行工具。首次配置或排查读[账号授权](references/case-mcp-setup.md)。
 
@@ -116,6 +117,8 @@ metadata:
 - 每份交付保留：关键依据、前提假设、重大不利因素、资料缺口、下一步与负责人。
 - 合同给可直接替换的条款文本；尽调写明基准日与调查限制；财产按线索／权属／措施状态分层；标书按采购文件逐项响应。
 - 正式交付前过一遍[交付前总闸](references/checklist.md)，并跑 `tools/citation_lint.py` 校验引用。校验不过不改标为可交付。
+- 需要交 Word／表格文件时用 `tools/docgen.py` 直出 docx（起诉状、证据目录、风险告知书），不要只给 Markdown 让律师重排。
+- 材料少、时间紧时按 [紧急模式](references/13-procedure-actions.md) 交付：先给能不能做、最紧期限、今天必做三件事，再给标满“待补”的骨架。
 - 最终签署与专业决定由承办律师依委托处理，不保证胜诉、无罪、回款或中标。免责表述只写一次，放在交付末尾，不逐段重复。
 
 跨模块或跨会话交接用[交接模板](references/handoff.md)，只传必要信息；无持久化工具时不承诺记住后续事项。调试或验收时才读[验收场景](references/acceptance-scenarios.md)。

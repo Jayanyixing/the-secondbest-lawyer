@@ -62,6 +62,7 @@ the-secondbest-lawyer/
     ├── 10-legal-quality.md      自查／有限复核／独立复核
     ├── 11-client-practice.md    会谈、预期管理、收费与授权、调解授权、结案沉淀
     ├── 12-standards.md          国标/行标/团标检索、效力四态、标准在诉讼与合同中的用法
+    ├── 13-procedure-actions.md  立案→保全→审理→上诉→执行的动作与材料清单、紧急模式
     ├── checklist.md             交付前总闸
     ├── handoff.md               交接卡（文本版＋JSON 版）
     ├── sources.md               官方入口与受限处理
@@ -72,10 +73,12 @@ the-secondbest-lawyer/
 ├── MAINTENANCE.md               半年一次复查＋触发式复查，带到期表
 ├── data/                        本地法条库（law.sqlite，不入库）
 ├── tests/fixtures/              解析器测试数据
+templates/                       起诉状／证据目录／风险告知书 的 JSON 样例
 tools/
-├── lawdb.py                     本地法条库：导入／检索／按条取文／哈希校验
+├── lawdb.py                     本地法条库＋结案卡片：导入／检索／按条取文／哈希校验／card
 ├── citation_lint.py             引用校验器（15 条规则）
 ├── build.py                     生成单文件版与技能包
+├── docgen.py                    直出 docx（起诉状／证据目录／风险告知书，零依赖）
 ├── eval_score.py                评测分数汇总
 └── review_due.py                复查到期检查
 eval/                            评测模板：case-card / scoring CSV
@@ -161,6 +164,33 @@ python3 tools/lawdb.py verify                 # 比对磁盘文件哈希，被�
 **L3 人工导出**：律师按检索式导出，拖进对话，AI 只做分析与登记。
 
 完整规则见 [`data-supply.md`](the-secondbest-lawyer/references/data-supply.md)。
+
+## 交付物：直接出 Word
+
+律师要交的是 .docx，不是 Markdown。`tools/docgen.py` 零依赖生成三种文书：
+
+```bash
+python3 tools/docgen.py complaint --input templates/complaint.sample.json --out 起诉状.docx
+python3 tools/docgen.py evidence  --input templates/evidence.sample.json  --out 证据目录.docx
+python3 tools/docgen.py risk      --input templates/risk.sample.json      --out 风险告知书.docx
+```
+
+生成后脚本会提示还有几处 `【待补】` 占位符——**没替换完不许交出去**。证据目录自动排成表格（序号／名称／证明内容／页数／原件或复印件／备注）。
+
+## 结案卡片：把判断沉淀下来
+
+办过的案子不该只用一次。`lawdb card-add` 把「争点 → 裁判要点 → 我方胜负手 → 摘录」存进同一个库，`lawdb card-query` 按关键词召回：
+
+```bash
+python3 tools/lawdb.py card-add --case-no "（2023）京0105民初XXX号" \
+    --cause 买卖合同纠纷 --issues "逾期验收是否视为验收合格" \
+    --holding "未在合理期限提出异议视为验收合格" --key-point "验收单须留签收记录" \
+    --quote "买受人未在约定期限内提出质量异议" --source 本地库
+
+python3 tools/lawdb.py card-query 验收
+```
+
+卡片里的摘录同样受 `citation.md` 约束：没有原文就不许写摘录。
 
 ## 评测：跑过才有分数
 

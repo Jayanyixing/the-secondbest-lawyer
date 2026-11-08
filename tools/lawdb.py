@@ -173,6 +173,17 @@ CREATE TABLE IF NOT EXISTS articles (
 CREATE INDEX IF NOT EXISTS idx_articles_law ON articles(law_id, sort_key);
 """
 
+CARDS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS cards (
+  id INTEGER PRIMARY KEY,
+  case_no TEXT, cause TEXT, issues TEXT, holding TEXT, our_side TEXT,
+  key_point TEXT, source TEXT, quote TEXT, tags TEXT, created_at TEXT
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
+  cause, issues, holding, key_point, quote, content='cards', content_rowid='id', tokenize='trigram'
+);
+"""
+
 FTS_SCHEMA = """
 CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
   article_no, text, content='articles', content_rowid='id', tokenize='trigram'
@@ -185,6 +196,15 @@ def open_db(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(path)
 
 
+def norm_quote(text: str) -> str:
+    return "".join(ch for ch in text if ch.isalnum())
+
+
+def too_short(keyword: str) -> bool:
+    """trigram 索引只索引 3 字以上；更短的词走 LIKE，否则会查不到。"""
+    return len(norm_quote(keyword)) < 3
+
+
 def has_fts(conn: sqlite3.Connection) -> bool:
     row = conn.execute("SELECT name FROM sqlite_master WHERE name='articles_fts'").fetchone()
     return bool(row)
@@ -193,6 +213,7 @@ def has_fts(conn: sqlite3.Connection) -> bool:
 def cmd_init(args) -> int:
     conn = open_db(args.db)
     conn.executescript(SCHEMA)
+    conn.executescript(CARDS_SCHEMA)
     try:
         conn.executescript(FTS_SCHEMA)
     except sqlite3.OperationalError:
@@ -255,7 +276,7 @@ def cmd_import(args) -> int:
 
 def cmd_query(args) -> int:
     conn = open_db(args.db)
-    if has_fts(conn):
+    if has_fts(conn) and not too_short(args.keyword):
         rows = conn.execute(
             """SELECT l.name, a.article_no, a.heading, a.text, l.source_url, l.fetched_at, l.official_check
                FROM articles_fts f
@@ -315,11 +336,85 @@ def cmd_stats(args) -> int:
     conn = open_db(args.db)
     laws = conn.execute("SELECT COUNT(*) FROM laws").fetchone()[0]
     arts = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
-    print(f"法规 {laws} 部，条文 {arts} 条，库：{args.db}")
+    try:
+        cards = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+    except sqlite3.OperationalError:
+        cards = 0
+    print(f"法规 {laws} 部，条文 {arts} 条，结案卡片 {cards} 张，库：{args.db}")
     for name, n, fetched in conn.execute(
         """SELECT l.name, COUNT(a.id), l.fetched_at FROM laws l
            LEFT JOIN articles a ON a.law_id=l.id GROUP BY l.id ORDER BY l.id"""):
         print(f"  - {name}：{n} 条（导入 {fetched}）")
+    return 0
+
+
+def cmd_card_add(args) -> int:
+    """登记结案卡片：把一次办案的判断沉淀成可检索的东西。"""
+    conn = open_db(args.db)
+    conn.executescript(CARDS_SCHEMA)
+    rows = []
+    if args.file:
+        data = json.loads(Path(args.file).read_text(encoding="utf-8"))
+        rows = data if isinstance(data, list) else [data]
+    else:
+        rows = [{
+            "case_no": args.case_no, "cause": args.cause, "issues": args.issues,
+            "holding": args.holding, "our_side": args.our_side, "key_point": args.key_point,
+            "source": args.source, "quote": args.quote, "tags": args.tags,
+        }]
+    for r in rows:
+        conn.execute(
+            """INSERT INTO cards(case_no,cause,issues,holding,our_side,key_point,source,quote,tags,created_at)
+               VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            (r.get("case_no"), r.get("cause"), r.get("issues"), r.get("holding"), r.get("our_side"),
+             r.get("key_point"), r.get("source"), r.get("quote"), r.get("tags"),
+             r.get("created_at") or date.today().isoformat()),
+        )
+    conn.commit()
+    conn.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
+    conn.commit()
+    print(f"已登记 {len(rows)} 张卡片")
+    return 0
+
+
+def cmd_card_query(args) -> int:
+    conn = open_db(args.db)
+    try:
+        if too_short(args.keyword):
+            raise sqlite3.OperationalError("short")
+        rows = conn.execute(
+            """SELECT c.case_no,c.cause,c.issues,c.holding,c.key_point,c.quote,c.source,c.created_at
+               FROM cards_fts f JOIN cards c ON c.id=f.rowid
+               WHERE cards_fts MATCH ? ORDER BY bm25(cards_fts) LIMIT ?""",
+            (args.keyword, args.limit),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = conn.execute(
+            """SELECT case_no,cause,issues,holding,key_point,quote,source,created_at FROM cards
+               WHERE cause LIKE ? OR issues LIKE ? OR key_point LIKE ? OR quote LIKE ? LIMIT ?""",
+            tuple([f"%{args.keyword}%"] * 4 + [args.limit]),
+        ).fetchall()
+    if not rows:
+        print(f"未命中卡片：{args.keyword}")
+        return 1
+    for r in rows:
+        print(f"\n【{r[1] or '-'}】{r[0] or '未记案号'}（{r[7]}）")
+        if r[2]: print(f"  争点：{r[2]}")
+        if r[3]: print(f"  裁判：{r[3]}")
+        if r[4]: print(f"  我方要点：{r[4]}")
+        if r[5]: print(f"  摘录：{r[5][:80]}")
+        if r[6]: print(f"  来源：{r[6]}")
+    return 0
+
+
+def cmd_card_list(args) -> int:
+    conn = open_db(args.db)
+    conn.executescript(CARDS_SCHEMA)
+    rows = conn.execute("SELECT case_no,cause,key_point,created_at FROM cards ORDER BY id DESC LIMIT ?",
+                        (args.limit,)).fetchall()
+    print(f"卡片 {conn.execute('SELECT COUNT(*) FROM cards').fetchone()[0]} 张")
+    for r in rows:
+        print(f"  - {r[1] or '-'}｜{r[0] or '未记案号'}｜{(r[2] or '')[:30]}｜{r[3]}")
     return 0
 
 
@@ -406,6 +501,21 @@ def main(argv: list[str]) -> int:
     sd = sub.add_parser("seed", help="按 data/manifest.json 批量导入")
     sd.add_argument("--manifest", default=str(ROOT / "data" / "manifest.json"))
     sd.set_defaults(func=cmd_seed)
+
+    ca = sub.add_parser("card-add", help="登记结案卡片")
+    ca.add_argument("--file", help="JSON 文件（单条或数组）")
+    ca.add_argument("--case-no"); ca.add_argument("--cause"); ca.add_argument("--issues")
+    ca.add_argument("--holding"); ca.add_argument("--our-side"); ca.add_argument("--key-point")
+    ca.add_argument("--source"); ca.add_argument("--quote"); ca.add_argument("--tags")
+    ca.set_defaults(func=cmd_card_add)
+
+    cq = sub.add_parser("card-query", help="检索卡片")
+    cq.add_argument("keyword"); cq.add_argument("--limit", type=int, default=5)
+    cq.set_defaults(func=cmd_card_query)
+
+    cl = sub.add_parser("card-list", help="卡片列表")
+    cl.add_argument("--limit", type=int, default=10)
+    cl.set_defaults(func=cmd_card_list)
 
     sub.add_parser("stats", help="库概况").set_defaults(func=cmd_stats)
     sub.add_parser("verify", help="校验导入文件与库内哈希").set_defaults(func=cmd_verify)
