@@ -131,7 +131,7 @@ def build_flat(order: list[str], variant: str) -> str:
 
 def build_zip(out: Path) -> Path:
     target = out / "the-secondbest-lawyer.zip"
-    include_dirs = ["the-secondbest-lawyer", "tools", "eval"]
+    include_dirs = ["the-secondbest-lawyer", "tools", "eval", "data"]
     include_files = ["README.md", "CHANGELOG.md", "LICENSE", "MAINTENANCE.md"]
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
         for folder in include_dirs:

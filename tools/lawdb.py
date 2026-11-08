@@ -90,6 +90,14 @@ def pdf_to_text(path: Path) -> str:
         raise SystemExit("需要 pdftotext（macOS 可 brew install poppler），或先把 PDF 另存为 Word/txt")
 
 
+def _store_path(path: Path) -> str:
+    """仓库内的文件存相对路径，换机器仍可校验；仓库外存绝对路径。"""
+    try:
+        return str(path.resolve().relative_to(ROOT))
+    except ValueError:
+        return str(path.resolve())
+
+
 def extract_text(path: Path) -> str:
     suffix = path.suffix.lower()
     if suffix in (".html", ".htm"):
@@ -228,7 +236,7 @@ def cmd_import(args) -> int:
                  fetched_at=excluded.fetched_at, sha256=excluded.sha256, file_name=excluded.file_name""",
             (name, args.issuer, args.doc_no, args.publish, args.effective, args.status or "现行有效",
              args.url, args.channel, args.official_check, args.date or date.today().isoformat(),
-             sha, str(p.resolve())),
+             sha, _store_path(p)),
         )
         law_id = conn.execute("SELECT id FROM laws WHERE name=?", (name,)).fetchone()[0]
         conn.execute("DELETE FROM articles WHERE law_id=?", (law_id,))
@@ -315,6 +323,32 @@ def cmd_stats(args) -> int:
     return 0
 
 
+def cmd_seed(args) -> int:
+    """按 data/manifest.json 批量导入——建库只需一条命令。"""
+    manifest = Path(args.manifest)
+    if not manifest.exists():
+        print(f"找不到 {manifest}", file=sys.stderr)
+        return 2
+    entries = json.loads(manifest.read_text(encoding="utf-8"))
+    ok = 0
+    for e in entries:
+        f = ROOT / e["file"] if not Path(e["file"]).is_absolute() else Path(e["file"])
+        if not f.exists():
+            print(f"跳过（文件缺失）：{e['file']}", file=sys.stderr)
+            continue
+        args.files, args.name = [str(f)], e.get("name")
+        args.issuer, args.doc_no = e.get("issuer"), e.get("doc_no")
+        args.publish, args.effective = e.get("publish"), e.get("effective")
+        args.status, args.url = e.get("status"), e.get("url")
+        args.channel = e.get("channel", "官方页面")
+        args.official_check = e.get("official_check", "未核")
+        args.date = e.get("fetched_at")
+        cmd_import(args)
+        ok += 1
+    print(f"共处理 {ok} 部")
+    return 0
+
+
 def cmd_verify(args) -> int:
     """校验库内记载的 sha256 与磁盘文件是否一致——回读校验的机器版。"""
     conn = open_db(args.db)
@@ -368,6 +402,10 @@ def main(argv: list[str]) -> int:
     a.add_argument("law")
     a.add_argument("no", help="如 第五百八十五条")
     a.set_defaults(func=cmd_article)
+
+    sd = sub.add_parser("seed", help="按 data/manifest.json 批量导入")
+    sd.add_argument("--manifest", default=str(ROOT / "data" / "manifest.json"))
+    sd.set_defaults(func=cmd_seed)
 
     sub.add_parser("stats", help="库概况").set_defaults(func=cmd_stats)
     sub.add_parser("verify", help="校验导入文件与库内哈希").set_defaults(func=cmd_verify)

@@ -1,5 +1,15 @@
 # 变更记录
 
+## 2026-11-08（v2.3.0）法条库随仓库分发
+
+- `data/law.sqlite` 随仓库提交：3 部当期法律、159 条，`lawdb stats` 开箱可用。
+- `data/sources/` 保存法规原文 txt，`data/manifest.json` 记录来源 URL、机关、公布与施行日期。
+- `tools/lawdb.py` 新增 `seed`：按 manifest 一条命令重建整个库（换机器、清库、换语料都靠它）。
+- 导入改为存相对路径，换目录或换机器 `verify` 仍能比对哈希。
+- `.gitignore` 放开 sqlite（法规文本不受著作权保护，可随仓库分发）；商业库导出件仍不入库。
+
+取数实录：`flk.npc.gov.cn` 所有 `/api/*` 返回同一 SPA、人大网历史文章页 302 到首页、法院转载站 403、最高法公报 502；仅人大网**当期**法规页（`/npc/c2/c30834/YYYYMM/tYYYYMMDD_NNNNNN.html`，需带 Referer）可稳定取得原文，故语料只有当期三部。
+
 ## 2026-11-08（v2.2.0）三层数据供给落地
 
 ### L1 本地法条库（新）

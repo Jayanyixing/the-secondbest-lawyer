@@ -135,10 +135,15 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 
 技能不附带数据库权限，所以数据分三层取，顺序写死：**L1 本地库 → L2 授权检索 → L3 人工导出 → 待取正文**。
 
-**L1 本地法条库**（离线、毫秒级、零查询费）：
+**L1 本地法条库**（离线、毫秒级、零查询费）。仓库自带一份示例语料（3 部当期法律、159 条，均从中国人大网取原文并核过条数），开箱即可检索；常用法自己导入 3 分钟一部：
 
 ```bash
-python3 tools/lawdb.py init
+python3 tools/lawdb.py seed                   # 按 data/manifest.json 批量入库
+python3 tools/lawdb.py query 公告期间          # 中文全文检索（FTS5 trigram）
+python3 tools/lawdb.py stats
+python3 tools/lawdb.py verify                 # 比对磁盘文件哈希，被改动即报警
+
+# 加一部法：文件丢进 data/sources/，manifest.json 加一条，再 seed
 python3 tools/lawdb.py import 民法典.docx --name 中华人民共和国民法典 \
     --issuer 全国人民代表大会 --publish 2020-05-28 --effective 2021-01-01 \
     --url https://flk.npc.gov.cn/... --official-check 已核
@@ -177,7 +182,7 @@ python3 tools/eval_score.py eval/scores.csv
 ## 已知局限
 
 - 格式、内部链接、校验器、法条库、构建与到期脚本已实测；**未做真实案件准确率评测**（见上节）。
-- 本地法条库默认是空的：需要你自己导入官方下载的法规文件；仓库不附带法规全文，避免版本与许可问题。
+- 本地法条库自带 3 部示例语料（159 条），**不是完整法规库**；民法典、民诉法、刑法、公司法等常用法需按 `data/README.md` 自行导入。
 - 法条条号与数值一律现场核，技能内不写死条文内容——避免技能自己制造错误引用。
 - 行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税、涉外等属范围外，只给边界与最小辅助，见 [`scope.md`](the-secondbest-lawyer/references/scope.md)。
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。

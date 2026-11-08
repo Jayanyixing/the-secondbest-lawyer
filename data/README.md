@@ -1,14 +1,49 @@
-# 本地法条库数据目录
+# 本地法条库（L1）
 
-`law.sqlite` 由 `tools/lawdb.py init` 生成，**不入库**（体积与许可原因）。
+`law.sqlite` 由 `tools/lawdb.py` 生成。仓库自带一份**示例语料**（3 部当期法律、159 条），用来验证导入链路；常用法（民法典、民诉法、刑法、公司法等）需要自己导入，见下。
 
-导入来源只用官方渠道，见 `references/data-supply.md`：
+## 现状
 
-```bash
-python3 tools/lawdb.py init
-python3 tools/lawdb.py import <官方下载的法规文件> --name <法规全称> \
-  --issuer <制定机关> --publish <公布日> --effective <施行日> \
-  --url <具体页面链接> --official-check 已核
+| 法规 | 条数 | 来源 | 官方复核 |
+|---|---|---|---|
+| 中华人民共和国检察公益诉讼法 | 53 | 中国人大网 | 已核 |
+| 中华人民共和国南极活动与环境保护法 | 59 | 中国人大网 | 已核 |
+| 中华人民共和国反跨境腐败法 | 47 | 中国人大网 | 已核 |
+
+`python3 tools/lawdb.py stats` 看实时情况。
+
+## 加一部法（3 分钟）
+
+1. **下载**：打开 [国家法律法规数据库](https://flk.npc.gov.cn/) 或 [中国人大网](http://www.npc.gov.cn/)，检索法规 → 用页面「下载」取 Word/HTML，或浏览器「另存为」。
+2. **放进** `data/sources/`。
+3. **登记**：在 `data/manifest.json` 加一条：
+
+```json
+{
+  "file": "data/sources/中华人民共和国民法典.txt",
+  "name": "中华人民共和国民法典",
+  "issuer": "全国人民代表大会",
+  "publish": "2020-05-28",
+  "effective": "2021-01-01",
+  "url": "https://flk.npc.gov.cn/...",
+  "official_check": "已核",
+  "channel": "官方页面",
+  "fetched_at": "2026-11-08"
+}
 ```
 
-导出文件被替换或修订时，`python3 tools/lawdb.py verify` 会报警，重新导入同名法规即可覆盖。
+4. **入库**：`python3 tools/lawdb.py seed`
+
+## 为什么不直接抓
+
+官方站点普遍反爬：`flk` 的接口已改为前端渲染（所有 `/api/*` 返回同一 SPA），人大网历史文章页一律 302 到首页，法院转载站 403、最高法公报 502。批量抓取既不稳定也不合规。**下载一次、本地长期复用**是唯一可持续的路子。
+
+这也是为什么仓库里只有 3 部当期法律：只有当期发布的页面还能稳定取到原文，历史法规需要你在浏览器里下载一次。
+
+## 校验
+
+```bash
+python3 tools/lawdb.py verify   # 比对磁盘文件哈希，被替换或修订即报警
+```
+
+法规文本不受著作权保护（法律、法规不属于《著作权法》保护对象），可以随仓库分发；但商业库导出的文件受订阅许可限制，不要提交进仓库。
