@@ -41,6 +41,7 @@ FULL_ORDER = [
     "06-corporate-due-diligence.md",
     "07-assets-enforcement.md",
     "08-law-firm-tender.md",
+    "08a-legal-service-bid.md",
     "09-case-operations.md",
     "10-legal-quality.md",
     "11-client-practice.md",

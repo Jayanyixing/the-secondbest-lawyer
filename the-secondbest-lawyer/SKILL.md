@@ -1,7 +1,7 @@
 ---
 name: the-secondbest-lawyer
 description: "中国大陆（默认北京）律师实务：民商事诉讼与仲裁、刑事辩护与刑事文书、合同审改与常年顾问、企业信息与法律尽调、财产保全与执行、律所投标；所有法条与案例引用必须可追溯到实际读到的原文。用于需要核验依据、梳理案卷或交付律师业务成果的任务。行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税测算、涉外法意见等属于范围外（见 references/scope.md）。Mainland China legal practice: civil and commercial litigation, criminal defense, contract review, due diligence, enforcement, tenders, with every citation traceable to source text."
-version: 2.34.0
+version: 2.35.0
 author: Jayan
 license: MIT
 platforms: [macos, linux, windows]
@@ -60,7 +60,7 @@ metadata:
 | 合同审改、条款起草、日常咨询 | [05 合同与顾问](references/05-contract-counsel.md) | 依赖外部依据时用 01 |
 | 查企业身份股权争议、写尽调报告 | [06 企业尽调](references/06-corporate-due-diligence.md) | 财产执行用 07 |
 | 财产线索、保全、执行与救济 | [07 财产与执行](references/07-assets-enforcement.md) | 02／03 定程序、09 核期限 |
-| 律所标书、入库遴选、服务方案与报价核对 | [08 投标](references/08-law-firm-tender.md) | 09 核节点 |
+| 律所标书、入库遴选、服务方案与报价核对 | [08 投标](references/08-law-firm-tender.md)、[08a 法律服务采购专项](references/08a-legal-service-bid.md) | 09 核节点 |
 | 跟案件、算期限、找公检法办公联系方式 | [09 流程与联络](references/09-case-operations.md) | 涉规则时用 01 |
 | 审查已有成果、交付诉讼稿、重大合同、尽调或标书 | [10 质量核验](references/10-legal-quality.md) | 同版正文、原材料、引用底稿 |
 | 首次会谈、费用与授权、进度沟通、调解授权、结案报告 | [11 客户沟通与结案](references/11-client-practice.md) | 策略在 02／03 |

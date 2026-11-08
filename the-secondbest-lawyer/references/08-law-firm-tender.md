@@ -1,6 +1,6 @@
 # 08 律所投标与法律服务方案
 
-通用规则见主 `SKILL.md`；引用按 [citation.md](citation.md)。关键节点与截止交 09 建表。
+通用规则见主 `SKILL.md`；引用按 [citation.md](citation.md)。关键节点与截止交 09 建表。**律所专项**（方案骨架、团队与证明、报价形态与红线、评分拆解、入库与单项目差异）见 [08a-legal-service-bid.md](08a-legal-service-bid.md)。
 
 ## 输入
 
@@ -36,6 +36,8 @@
 
 - `tools/tender_matrix.py 采购文件 --body 标书 --out matrix.csv`：抽候选要求行、按资格／实质性／评分分类、产出矩阵骨架、按 6 字片段重合率标「已应答／弱匹配／未找到」。分类靠关键词，必有误判，以原文与评标办法为准；它只保证不漏条。
 - `tools/tender_consistency.py 标书目录 [--anonymous]`：查大写与小写金额矛盾、同一价格标签多值（含跨文件）、同一日期标签多值、文档属性泄露身份。
+- `tools/tender_score.py 自评.json`：按最低价／基准价／固定价三种算法算价格分，输出总分、需争取项与降价边际（样例 `templates/tender-score.sample.json`）。
+- `tools/tender_credits.py --credits data/credits.json --need 3 --years 2022-2025 --keyword 建设工程`：业绩按年份／关键词／金额匹配，分「可用／需授权／不符合」，缺口照实输出。
 
 ## 标准交付
 
