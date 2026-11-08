@@ -32,11 +32,44 @@ def norm(text: str) -> str:
     return re.sub(r"[\s\u3000]+", "", text or "")
 
 
+def strip_md(text: str) -> str:
+    """去掉 markdown 标题，包括被整理件粘到条文末尾的行内标题（…除外。####第三节…）。"""
+    text = re.sub(r"(?m)^#{1,6}[^\n]*$", "", text)
+    text = re.sub(r"#{2,}[^#\n]*", "", text)
+    return re.sub(r"#+", "", text)
+
+
 def load(path: Path) -> tuple[dict[str, str], list[int]]:
-    arts = parse_articles(extract_text(path))
+    text = extract_text(path)
+    if path.suffix.lower() in {".md", ".markdown"}:
+        text = strip_md(text)
+    arts = parse_articles(text)
     book = {a["article_no"]: norm(a["text"]) for a in arts if a["sort"] > 0}
     nums = sorted({a["sort"] for a in arts if a["sort"] > 0})
     return book, nums
+
+
+HEAD_TAIL = re.compile(
+    r"(?:第[一二三四五六七八九十百]+(?:分)?编"
+    r"|第[一二三四五六七八九十百]+[章节]"
+    r"|附则)[^。；，、]{0,12}$"
+)
+
+
+def strip_tail_heading(text: str) -> str:
+    """去掉粘在条文末尾的目录标题（官方 docx 的「第三分编用益物权」、库内的「####第二节」残留）。"""
+    prev = None
+    while prev != text:
+        prev = text
+        text = HEAD_TAIL.sub("", text)
+    return text
+
+
+def is_heading_glue(a: str, b: str) -> bool:
+    """两边只差末尾目录标题时，算标题粘连，不算正文差异。"""
+    if a == b:
+        return False
+    return strip_tail_heading(a) == strip_tail_heading(b)
 
 
 def snippet(a: str, b: str, width: int = 24) -> tuple[str, str]:
@@ -88,7 +121,9 @@ def main(argv: list[str]) -> int:
 
     only_a = [n for n in a if n not in b]
     only_b = [n for n in b if n not in a]
-    changed = [n for n in a if n in b and a[n] != b[n]]
+    raw_changed = [n for n in a if n in b and a[n] != b[n]]
+    glue = [n for n in raw_changed if is_heading_glue(a[n], b[n])]
+    changed = [n for n in raw_changed if n not in glue]
 
     def label(no: str) -> str:
         return no
@@ -98,6 +133,8 @@ def main(argv: list[str]) -> int:
     if only_b:
         print(f"只在库内：{len(only_b)} 条 → {', '.join(label(x) for x in only_b[:8])}")
 
+    if glue:
+        print(f"\n只差末尾目录标题（非正文差异）：{len(glue)} 条 → {', '.join(glue[:8])}")
     if changed:
         print(f"\n内容不一致：{len(changed)} 条")
         for no in changed[: args.limit]:
@@ -105,12 +142,12 @@ def main(argv: list[str]) -> int:
             print(f"\n  {no}")
             print(f"    官方：…{x}…")
             print(f"    库内：…{y}…")
-    elif not only_a and not only_b:
+    elif not only_a and not only_b and not glue:
         print("\n结论：条号与内容完全一致 ✓")
         return 0
 
     identical = len([n for n in a if n in b and a[n] == b[n]])
-    print(f"\n一致 {identical} 条｜不一致 {len(changed)} 条｜单边 {len(only_a) + len(only_b)} 条")
+    print(f"\n一致 {identical} 条｜标题粘连 {len(glue)} 条｜实质不一致 {len(changed)} 条｜单边 {len(only_a) + len(only_b)} 条")
     return 0 if not changed and not only_a and not only_b else 1
 
 
