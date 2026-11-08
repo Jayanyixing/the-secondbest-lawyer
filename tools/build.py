@@ -47,6 +47,7 @@ FULL_ORDER = [
     "11-client-practice.md",
     "12-standards.md",
     "13-procedure-actions.md",
+    "14-labor.md",
     "checklist.md",
     "sources.md",
     "case-access.md",

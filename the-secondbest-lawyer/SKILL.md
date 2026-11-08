@@ -1,7 +1,7 @@
 ---
 name: the-secondbest-lawyer
 description: "中国大陆（默认北京）律师实务：民商事诉讼与仲裁、刑事辩护与刑事文书、合同审改与常年顾问、企业信息与法律尽调、财产保全与执行、律所投标；所有法条与案例引用必须可追溯到实际读到的原文。用于需要核验依据、梳理案卷或交付律师业务成果的任务。行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税测算、涉外法意见等属于范围外（见 references/scope.md）。Mainland China legal practice: civil and commercial litigation, criminal defense, contract review, due diligence, enforcement, tenders, with every citation traceable to source text."
-version: 2.36.4
+version: 2.36.5
 author: Jayan
 license: MIT
 platforms: [macos, linux, windows]
@@ -66,6 +66,7 @@ metadata:
 | 首次会谈、费用与授权、进度沟通、调解授权、结案报告 | [11 客户沟通与结案](references/11-client-practice.md) | 策略在 02／03 |
 | 国标／行标／团标检索、产品质量与验收标准、标准适用争议 | [12 标准检索](references/12-standards.md) | 合同场景回 05，诉讼回 02 |
 | 立案、保全、开庭、上诉、执行的具体动作与材料清单 | [13 程序动作](references/13-procedure-actions.md) | 期限用 09，证据用 04 |
+| 劳动仲裁、工伤、竞业限制、经济补偿的争点顺序 | [14 劳动人事](references/14-labor.md) | 金额测算标〔待核〕，程序用 09 |
 
 查案例时另读[检索接入与降级](references/case-access.md)，优先用本会话已授权的北大法宝或威科先行工具。首次配置或排查读[账号授权](references/case-mcp-setup.md)。
 

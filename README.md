@@ -74,7 +74,7 @@ the-secondbest-lawyer/
     ├── codex-case-mcp.toml      配置样例
     └── acceptance-scenarios.md  34 个试用与压力测试场景
 ├── MAINTENANCE.md               半年一次复查＋触发式复查，带到期表
-├── data/                        法条库、卡片库、manifest、版本风险表（cards.sqlite 为 93 张脱敏卡）
+├── data/                        法条库、卡片库、manifest、版本风险表（cards.sqlite 为 95 张脱敏卡）
 └── tests/fixtures/              解析器测试数据
 templates/                       文书 JSON 样例、取卡模板与批次、弃卡清单、检索验收题
 tools/
@@ -230,11 +230,11 @@ python3 tools/lawdb.py card-add --case-no "（2023）京0105民初XXX号" \
 python3 tools/lawdb.py card-query 验收
 ```
 
-### 卡片库：公开 93 张，本地全量另存
+### 卡片库：公开 95 张，本地全量另存
 
-`data/cards.sqlite` **入库**，但只含 **93 张脱敏卡**——clone 下来就能直接 `card-query`、跑 `card_health.py`。
+`data/cards.sqlite` **入库**，但只含 **95 张脱敏卡**——clone 下来就能直接 `card-query`、跑 `card_health.py`。
 
-含当事人姓名的 5 张案卷卡（`id` 1、2、6、9、14）留在本地全量库 `data/cards.full.sqlite`（已 gitignore，98 张）。**两张表不是同一个东西**：
+含当事人姓名的 5 张案卷卡（`id` 1、2、6、9、14）留在本地全量库 `data/cards.full.sqlite`（已 gitignore，100 张）。**两张表不是同一个东西**：
 
 | 文件 | 卡片数 | 是否入库 |
 |---|---:|---|
@@ -242,7 +242,7 @@ python3 tools/lawdb.py card-query 验收
 | `data/cards.full.sqlite` | 98（全 verified，含 5 张姓名卡） | ❌ |
 | `data/cards.json` | 93，与 `cards.sqlite` 同源导出的只读副本 | ✅ |
 
-`card_health.py` 默认体检 93 张那份；要体检全量：`python3 tools/card_health.py --db data/cards.full.sqlite`。新增卡片默认写 `cards.sqlite`，涉姓名的那几张本地手动挪到 `cards.full.sqlite`，**不要把全量库推上去**。
+`card_health.py` 默认体检 95 张那份；要体检全量：`python3 tools/card_health.py --db data/cards.full.sqlite`。新增卡片默认写 `cards.sqlite`，涉姓名的那几张本地手动挪到 `cards.full.sqlite`，**不要把全量库推上去**。
 
 ### 扫描件怎么办
 
@@ -276,7 +276,7 @@ lawdb.py card-query 施工 --status pending    # 只看待核
 lawdb.py card-query 质量 --kind rule         # 只看规则卡（会议纪要/司法解释类）
 ```
 
-当前入库 **93 张全部 verified**（判例 50、规则 43，另 5 张姓名卡在本地 `cards.full.sqlite`）。`data/cards.json` 由同一份 `cards.sqlite` 导出，两者内容一致；改库后跑 `python3 tools/lawdb.py card-export` 重新导出，别手改 JSON。
+当前入库 **95 张全部 verified**（判例 50、规则 45，另 5 张姓名卡在本地 `cards.full.sqlite`）。`data/cards.json` 由同一份 `cards.sqlite` 导出，两者内容一致；改库后跑 `python3 tools/lawdb.py card-export` 重新导出，别手改 JSON。
 
 从判决书抽卡的顺序与反例见 [`templates/card-extraction.md`](templates/card-extraction.md)。
 
@@ -329,7 +329,7 @@ python3 tools/lawdb.py verify         # 法条文件哈希，84/84
 
 - 格式、内部链接、校验器、法条库、构建与到期脚本已实测；**未做真实案件准确率评测**（见上节）。
 - 本地法条库 84 部、9081 条，覆盖民法典、刑法、三大诉讼法、公司法、劳动、建工、担保、破产、知产、行政与数据合规，含 20 部司法解释与规定；**不含北京以外的地方性文件，部门规章仅 7 部**。78 部为整理件（未核），正式文书引用前须按 `citation.md` 回读官方原文。
-- 卡片库 98 张全部来自已办案件与公开典型案例，**只能证明「这一案这样判」，不证明跨案结论**；`pending` 卡不可引用。
+- 卡片库 100 张全部来自已办案件与公开典型案例，**只能证明「这一案这样判」，不证明跨案结论**；`pending` 卡不可引用。
 - 法条条号与数值一律现场核，技能内不写死条文内容——避免技能自己制造错误引用。
 - 行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税、涉外等属范围外，只给边界与最小辅助，见 [`scope.md`](the-secondbest-lawyer/references/scope.md)。
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。
@@ -342,10 +342,10 @@ python3 tools/lawdb.py verify         # 法条文件哈希，84/84
 | 内容 | 是否公开 | 说明 |
 |---|---|---|
 | skill 本体、工具、法条库 | ✅ 公开 | 法律文本不受著作权保护，工具为通用能力 |
-| 卡片库 `data/cards.sqlite`、`data/cards.json` | ✅ 公开（**已脱敏**） | 93 张，两种格式同源；**每张卡的 `quote` 都是逐字原文**。含当事人姓名的 5 张案卷卡不在其中，只存本地 `cards.full.sqlite`，避免出现“脱敏后引文不再逐字”的中间状态 |
+| 卡片库 `data/cards.sqlite`、`data/cards.json` | ✅ 公开（**已脱敏**） | 95 张，两种格式同源；**每张卡的 `quote` 都是逐字原文**。含当事人姓名的 5 张案卷卡不在其中，只存本地 `cards.full.sqlite`，避免出现“脱敏后引文不再逐字”的中间状态 |
 | 案件快照 `templates/snapshots/` | ✅ 公开 | 均为最高法公开发布的典型案例页，本身已匿名 |
 | 检索报告 `reports/` | ❌ 不公开 | 含具体案件分析与当事人关系，`.gitignore` 已排除 |
-| 本地全量卡片库 `data/cards.full.sqlite` | ❌ 不公开 | 98 张，比公开版多 5 张含姓名的案卷卡 |
+| 本地全量卡片库 `data/cards.full.sqlite` | ❌ 不公开 | 100 张，比公开版多 5 张含姓名的案卷卡 |
 
 脱敏口径：姓名→姓+某（侯某→侯某、张某→张某、高某→高某）；案号保留遮罩（`（2024）京03民终16XXX号`）；企业名称保留（公开主体）。
 
