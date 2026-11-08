@@ -682,6 +682,21 @@ def cmd_card_query(args) -> int:
     return 0
 
 
+def cmd_card_export(args) -> int:
+    """把卡片导出成可入库的 JSON（供版本管理／备份／换机）。"""
+    conn = open_db(args.db)
+    ensure_cards_schema(conn)
+    cols = ["case_no", "cause", "issues", "holding", "our_side", "key_point",
+            "quote", "source", "tags", "kind", "verify_status", "created_at"]
+    rows = conn.execute(f"SELECT {','.join(cols)} FROM cards ORDER BY id").fetchall()
+    data = [dict(zip(cols, r)) for r in rows]
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"已导出 {len(data)} 张 → {out}")
+    return 0
+
+
 def cmd_card_review(args) -> int:
     """批量复核：拿 pending 卡的摘录去快照／本地法条库里找，命中即标 verified。"""
     conn = open_db(args.db)
@@ -844,6 +859,10 @@ def main(argv: list[str]) -> int:
     cq.add_argument("--status", choices=["verified", "pending"], help="只看已核／待核")
     cq.add_argument("--kind", choices=["judgment", "rule"], help="只看判例卡／规则卡")
     cq.set_defaults(func=cmd_card_query)
+
+    ce = sub.add_parser("card-export", help="导出卡片 JSON（可入库／备份）")
+    ce.add_argument("--out", default=str(ROOT / "data" / "cards.json"))
+    ce.set_defaults(func=cmd_card_export)
 
     cr = sub.add_parser("card-review", help="批量复核 pending 卡（对照快照/本地库）")
     cr.add_argument("--snapshots", default=str(ROOT / "templates" / "snapshots"))
