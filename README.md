@@ -61,6 +61,7 @@ the-secondbest-lawyer/
     ├── 09-case-operations.md    期限三档、期限类型全表、公开联络
     ├── 10-legal-quality.md      自查／有限复核／独立复核
     ├── 11-client-practice.md    会谈、预期管理、收费与授权、调解授权、结案沉淀
+    ├── 12-standards.md          国标/行标/团标检索、效力四态、标准在诉讼与合同中的用法
     ├── checklist.md             交付前总闸
     ├── handoff.md               交接卡（文本版＋JSON 版）
     ├── sources.md               官方入口与受限处理
