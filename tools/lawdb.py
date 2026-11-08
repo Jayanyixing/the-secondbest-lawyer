@@ -338,6 +338,8 @@ def cmd_query(args) -> int:
         body = args.chars if hasattr(args, "chars") else 300
         print(text[: body] + ("…" if len(text) > body else ""))
         print(f"  来源：{url or '未记录'}｜导入：{fetched}｜官方复核：{check or '未核'}")
+        if (check or "") != "已核":
+            print("  ⚠ 转载件：版本未经核验，仅作检索索引；引用前必须打开官方原文回读（见 citation.md）")
     return 0
 
 
@@ -357,6 +359,8 @@ def cmd_article(args) -> int:
         print(f"【{law}】{no}" + (f"  〔{heading}〕" if heading else ""))
         print(text)
         print(f"\n来源：{url or '未记录'}｜导入：{fetched}｜复核：{check}｜公布：{pub or '-'}｜施行：{eff or '-'}")
+        if (check or "") != "已核":
+            print("⚠ 转载件：版本未经核验，仅作检索索引；引用前必须打开官方原文回读（见 citation.md）")
     return 0
 
 

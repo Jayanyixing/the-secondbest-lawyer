@@ -1,7 +1,7 @@
 ---
 name: the-secondbest-lawyer
 description: "中国大陆（默认北京）律师实务：民商事诉讼与仲裁、刑事辩护与刑事文书、合同审改与常年顾问、企业信息与法律尽调、财产保全与执行、律所投标；所有法条与案例引用必须可追溯到实际读到的原文。用于需要核验依据、梳理案卷或交付律师业务成果的任务。行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税测算、涉外法意见等属于范围外（见 references/scope.md）。Mainland China legal practice: civil and commercial litigation, criminal defense, contract review, due diligence, enforcement, tenders, with every citation traceable to source text."
-version: 2.6.0
+version: 2.6.1
 author: Jayan
 license: MIT
 platforms: [macos, linux, windows]
