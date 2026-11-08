@@ -10,11 +10,15 @@
 
 **每一个法条和案例都必须能追溯到你实际读到的那一段文字。** 不是“搜到过”，是“读到了、标得出页码或段落、说得清来源”。
 
-这条规则不是靠提示词自觉，而是分三层落实：
+这条规则不是靠提示词自觉，而是分四层落实：
 
 1. **底稿先行**：任何依据先登记到引用底稿（编号、四要素、来源、定位、读取范围、复核状态），再进正文，正文用 `[C-01]` 这类标签回指。
 2. **封闭词表**：读取范围只能是 `全文／节选／摘要／标题／未读`。只有“全文”和“节选”能支撑结论；`摘要` 和 `标题` 只能进“待取正文”表。这一条直接掐死“只看摘要编裁判理由”。
-3. **机械校验**：交付前跑 `tools/citation_lint.py`，正文里出现未登记的案号、占位案号、摘要素材撑结论、无状态标签的期限日期、绝对化措辞，一律报错，不许标“可交付”。
+3. **逐字摘录**：每条支撑结论的依据，底稿里必须存一句 **8–60 字的原文摘录**，正文引用处要原样出现。概述不算，`本院认为` 这类套话也不算——摘录是人眼唯一能快速验伪的东西。
+4. **交付前回读**：进了结论的条目，重新打开来源逐字比对摘录；不一致就降级为“待取正文”，不允许保留原引用。
+5. **机械校验**：交付前跑 `tools/citation_lint.py`，未登记案号、占位案号、摘要素材撑结论、缺摘录、摘录不在引用处、未回读、无状态标签的期限日期、绝对化措辞，一律报错。
+
+说清楚一件事：**校验器只能验形式一致性，不能证明那条案例是真的**。能不能证伪，靠摘录、回读和律师本人。不要把“校验通过”当成“已核实”。
 
 细则见 [`references/citation.md`](the-secondbest-lawyer/references/citation.md)。
 
@@ -56,6 +60,7 @@ the-secondbest-lawyer/
     ├── 08-law-firm-tender.md    响应矩阵、报价、递交检查
     ├── 09-case-operations.md    期限三档、期限类型全表、公开联络
     ├── 10-legal-quality.md      自查／有限复核／独立复核
+    ├── 11-client-practice.md    会谈、预期管理、收费与授权、调解授权、结案沉淀
     ├── checklist.md             交付前总闸
     ├── handoff.md               交接卡（文本版＋JSON 版）
     ├── sources.md               官方入口与受限处理
@@ -63,9 +68,13 @@ the-secondbest-lawyer/
     ├── case-mcp-setup.md        案例库 MCP 配置（含 Claude Code／Codex 写法）
     ├── codex-case-mcp.toml      配置样例
     └── acceptance-scenarios.md  29 个试用与压力测试场景
+├── MAINTENANCE.md               半年一次复查＋触发式复查，带到期表
 tools/
-├── citation_lint.py             引用校验器（10 条规则，无第三方依赖）
-└── build.py                     生成单文件版与技能包
+├── citation_lint.py             引用校验器（15 条规则）
+├── build.py                     生成单文件版与技能包
+├── eval_score.py                评测分数汇总
+└── review_due.py                复查到期检查
+eval/                            评测模板：case-card / scoring CSV
 dist/                            构建产物（单文件 lite/full + zip）
 ```
 
@@ -103,6 +112,11 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 | R8 | 引用了不存在的底稿编号 |
 | R9 | 自查模式却写“已复核” |
 | R10 | 底稿条目未被引用（可能多余） |
+| R11 | 支撑结论的条目缺原文摘录 |
+| R12 | 摘录没有出现在引用处（或全文找不到） |
+| R13 | 摘录过短或全是套话，无法证伪 |
+| R14 | 同一摘录被不同条目复用 |
+| R15 | 用于结论的条目未回读 |
 
 没有 shell 的宿主跳过校验器，人工过 [`references/checklist.md`](the-secondbest-lawyer/references/checklist.md)，并在交付里说明未做机器校验。
 
@@ -114,9 +128,27 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 
 接不上或读不到正文时按 [`case-access.md`](the-secondbest-lawyer/references/case-access.md) 降级：读你上传的判决书 → 给可复制检索式 → 单列“待取正文”，不猜裁判理由。
 
+## 评测：跑过才有分数
+
+`references/eval-protocol.md` 写的是怎么做**回溯盲评**：10 件已结案件，隐藏结论，同一案件只跑一次，按 6 个维度 0–3 分打分（事实准确／引用可追溯／时点适用／不利面覆盖／交付可用／边界诚实），编造类问题直接记 0。
+
+```bash
+cp eval/case-card.template.json eval/cases/C01.json
+cp eval/scoring.template.csv eval/scores.csv
+python3 tools/eval_score.py eval/scores.csv
+```
+
+目前**没有跑过任何一例**，所以本仓库不提供准确率数字。谁跑完，分数才算数。
+
+## 维护
+
+- 常规：每 6 个月复查；触发式：新法施行、程序法修订、官方入口迁移、实战中出现错引。
+- 到期检查：`python3 tools/review_due.py`（逾期返回非零）。
+- 清单见 [`MAINTENANCE.md`](MAINTENANCE.md)。
+
 ## 已知局限
 
-- 格式、内部链接、校验器与构建脚本已实测；**未做真实案件准确率评测**。
+- 格式、内部链接、校验器、构建与到期脚本已实测；**未做真实案件准确率评测**（见上节）。
 - 法条条号与数值一律现场核，技能内不写死条文内容——避免技能自己制造错误引用。
 - 行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税、涉外等属范围外，只给边界与最小辅助，见 [`scope.md`](the-secondbest-lawyer/references/scope.md)。
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。

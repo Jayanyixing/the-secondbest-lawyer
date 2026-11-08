@@ -1,0 +1,23 @@
+{
+  "case_id": "C01",
+  "module": "02-civil-litigation",
+  "type": "civil",
+  "stage": "一审",
+  "stance": "原告",
+  "as_of": "2026-11-08",
+  "materials": [
+    {"id": "E-01", "file": "合同.pdf", "pages": "1-12", "note": "已脱敏"}
+  ],
+  "task_prompt": "站在原告立场，出策略简报、争点矩阵与证据目录。",
+  "sealed_answer": {
+    "location": "eval/sealed/C01.md",
+    "note": "评测期间从工作目录移出"
+  },
+  "run": {
+    "duration_min": 12,
+    "tools_failed": 0,
+    "network": true,
+    "degraded": false,
+    "transcript": "eval/runs/C01.md"
+  }
+}

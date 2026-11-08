@@ -42,11 +42,13 @@ FULL_ORDER = [
     "08-law-firm-tender.md",
     "09-case-operations.md",
     "10-legal-quality.md",
+    "11-client-practice.md",
     "checklist.md",
     "sources.md",
     "case-access.md",
     "case-mcp-setup.md",
     "handoff.md",
+    "eval-protocol.md",
     "acceptance-scenarios.md",
 ]
 
@@ -128,8 +130,8 @@ def build_flat(order: list[str], variant: str) -> str:
 
 def build_zip(out: Path) -> Path:
     target = out / "the-secondbest-lawyer.zip"
-    include_dirs = ["the-secondbest-lawyer", "tools"]
-    include_files = ["README.md", "CHANGELOG.md", "LICENSE"]
+    include_dirs = ["the-secondbest-lawyer", "tools", "eval"]
+    include_files = ["README.md", "CHANGELOG.md", "LICENSE", "MAINTENANCE.md"]
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
         for folder in include_dirs:
             base = ROOT / folder
