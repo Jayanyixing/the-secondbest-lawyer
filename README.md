@@ -62,6 +62,7 @@ the-secondbest-lawyer/
     ├── 10-legal-quality.md      自查／有限复核／独立复核
     ├── 11-client-practice.md    会谈、预期管理、收费与授权、调解授权、结案沉淀
     ├── 12-standards.md          国标/行标/团标检索、效力四态、标准在诉讼与合同中的用法
+    ├── 13-procedure-actions.md  立案→保全→审理→上诉→执行的动作与材料清单、紧急模式
     ├── checklist.md             交付前总闸
     ├── handoff.md               交接卡（文本版＋JSON 版）
     ├── sources.md               官方入口与受限处理
@@ -72,10 +73,12 @@ the-secondbest-lawyer/
 ├── MAINTENANCE.md               半年一次复查＋触发式复查，带到期表
 ├── data/                        本地法条库（law.sqlite，不入库）
 ├── tests/fixtures/              解析器测试数据
+templates/                       起诉状／证据目录／风险告知书 的 JSON 样例
 tools/
-├── lawdb.py                     本地法条库：导入／检索／按条取文／哈希校验
+├── lawdb.py                     本地法条库＋结案卡片：导入／检索／按条取文／哈希校验／card
 ├── citation_lint.py             引用校验器（15 条规则）
 ├── build.py                     生成单文件版与技能包
+├── docgen.py                    直出 docx（起诉状／证据目录／风险告知书，零依赖）
 ├── eval_score.py                评测分数汇总
 └── review_due.py                复查到期检查
 eval/                            评测模板：case-card / scoring CSV
@@ -136,7 +139,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 
 技能不附带数据库权限，所以数据分三层取，顺序写死：**L1 本地库 → L2 授权检索 → L3 人工导出 → 待取正文**。
 
-**L1 本地法条库**（离线、毫秒级、零查询费）。仓库自带一份示例语料（3 部当期法律、159 条，均从中国人大网取原文并核过条数），开箱即可检索；常用法自己导入 3 分钟一部：
+**L1 本地法条库**（离线、毫秒级、零查询费）。仓库自带 **42 部核心法、5807 条**（民法典全 1260 条、刑法、民诉、刑诉、行诉、公司、劳动、知产、行政、环境、数据安全等），条号逐部校验过连续性。其中 3 部为官方原文（已核），39 部为维基文库转载（未核，引用前须回读官方原文）：
 
 ```bash
 python3 tools/lawdb.py seed                   # 按 data/manifest.json 批量入库
@@ -162,6 +165,33 @@ python3 tools/lawdb.py verify                 # 比对磁盘文件哈希，被�
 
 完整规则见 [`data-supply.md`](the-secondbest-lawyer/references/data-supply.md)。
 
+## 交付物：直接出 Word
+
+律师要交的是 .docx，不是 Markdown。`tools/docgen.py` 零依赖生成三种文书：
+
+```bash
+python3 tools/docgen.py complaint --input templates/complaint.sample.json --out 起诉状.docx
+python3 tools/docgen.py evidence  --input templates/evidence.sample.json  --out 证据目录.docx
+python3 tools/docgen.py risk      --input templates/risk.sample.json      --out 风险告知书.docx
+```
+
+生成后脚本会提示还有几处 `【待补】` 占位符——**没替换完不许交出去**。证据目录自动排成表格（序号／名称／证明内容／页数／原件或复印件／备注）。
+
+## 结案卡片：把判断沉淀下来
+
+办过的案子不该只用一次。`lawdb card-add` 把「争点 → 裁判要点 → 我方胜负手 → 摘录」存进同一个库，`lawdb card-query` 按关键词召回：
+
+```bash
+python3 tools/lawdb.py card-add --case-no "（2023）京0105民初XXX号" \
+    --cause 买卖合同纠纷 --issues "逾期验收是否视为验收合格" \
+    --holding "未在合理期限提出异议视为验收合格" --key-point "验收单须留签收记录" \
+    --quote "买受人未在约定期限内提出质量异议" --source 本地库
+
+python3 tools/lawdb.py card-query 验收
+```
+
+卡片里的摘录同样受 `citation.md` 约束：没有原文就不许写摘录。
+
 ## 评测：跑过才有分数
 
 `references/eval-protocol.md` 写的是怎么做**回溯盲评**：10 件已结案件，隐藏结论，同一案件只跑一次，按 6 个维度 0–3 分打分（事实准确／引用可追溯／时点适用／不利面覆盖／交付可用／边界诚实），编造类问题直接记 0。
@@ -183,7 +213,7 @@ python3 tools/eval_score.py eval/scores.csv
 ## 已知局限
 
 - 格式、内部链接、校验器、法条库、构建与到期脚本已实测；**未做真实案件准确率评测**（见上节）。
-- 本地法条库自带 3 部示例语料（159 条），**不是完整法规库**；民法典、民诉法、刑法、公司法等常用法需按 `data/README.md` 自行导入。
+- 本地法条库 42 部、5807 条，覆盖常用民商刑行与知产、数据合规；**不包含全部司法解释与地方文件**。转载件（未核）在正式文书引用前须按 `citation.md` 回读官方原文。
 - 法条条号与数值一律现场核，技能内不写死条文内容——避免技能自己制造错误引用。
 - 行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税、涉外等属范围外，只给边界与最小辅助，见 [`scope.md`](the-secondbest-lawyer/references/scope.md)。
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。

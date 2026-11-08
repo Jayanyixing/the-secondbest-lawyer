@@ -112,16 +112,29 @@ def extract_text(path: Path) -> str:
 # ---------------------------------------------------------------- 切条
 
 
+ZWSP = "\u200b\u200c\u200d\u200e\u200f\ufeff"
+
+
+def clean_text(text: str) -> str:
+    """去掉零宽字符和行首残留空格——网页复制常见，不清会把「第X条」挤到行中。"""
+    for ch in ZWSP:
+        text = text.replace(ch, "")
+    return text
+
+
 def parse_articles(text: str) -> list[dict]:
     """按「第X条」切条，并把最近一层的编/章/节挂到条文上。"""
-    lines = [ln.strip() for ln in text.splitlines()]
+    lines = [ln.strip() for ln in clean_text(text).splitlines()]
     cleaned, heading = [], None
     for ln in lines:
         if not ln:
             continue
         m = HEADING_RE.match(ln)
         if m:
-            heading = f"{m.group(1)} {m.group(2)}".strip()
+            head = re.sub(r"\[[^\]]{0,8}编辑[^\]]*\]", "", m.group(2))
+            heading = f"{m.group(1)} {head}".strip()
+            continue
+        if re.fullmatch(r"\[?[^\]]{0,8}编辑\]?", ln):
             continue
         cleaned.append((ln, heading))
 
@@ -159,7 +172,7 @@ CREATE TABLE IF NOT EXISTS laws (
   issuer TEXT, doc_no TEXT,
   publish_date TEXT, effective_date TEXT, status TEXT,
   source_url TEXT, source_channel TEXT, official_check TEXT DEFAULT '未核',
-  fetched_at TEXT, sha256 TEXT, file_name TEXT
+  fetched_at TEXT, sha256 TEXT, file_name TEXT, note TEXT
 );
 CREATE TABLE IF NOT EXISTS articles (
   id INTEGER PRIMARY KEY,
@@ -171,6 +184,17 @@ CREATE TABLE IF NOT EXISTS articles (
   UNIQUE(law_id, article_no)
 );
 CREATE INDEX IF NOT EXISTS idx_articles_law ON articles(law_id, sort_key);
+"""
+
+CARDS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS cards (
+  id INTEGER PRIMARY KEY,
+  case_no TEXT, cause TEXT, issues TEXT, holding TEXT, our_side TEXT,
+  key_point TEXT, source TEXT, quote TEXT, tags TEXT, created_at TEXT
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
+  cause, issues, holding, key_point, quote, content='cards', content_rowid='id', tokenize='trigram'
+);
 """
 
 FTS_SCHEMA = """
@@ -185,6 +209,15 @@ def open_db(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(path)
 
 
+def norm_quote(text: str) -> str:
+    return "".join(ch for ch in text if ch.isalnum())
+
+
+def too_short(keyword: str) -> bool:
+    """trigram 索引只索引 3 字以上；更短的词走 LIKE，否则会查不到。"""
+    return len(norm_quote(keyword)) < 3
+
+
 def has_fts(conn: sqlite3.Connection) -> bool:
     row = conn.execute("SELECT name FROM sqlite_master WHERE name='articles_fts'").fetchone()
     return bool(row)
@@ -193,6 +226,7 @@ def has_fts(conn: sqlite3.Connection) -> bool:
 def cmd_init(args) -> int:
     conn = open_db(args.db)
     conn.executescript(SCHEMA)
+    conn.executescript(CARDS_SCHEMA)
     try:
         conn.executescript(FTS_SCHEMA)
     except sqlite3.OperationalError:
@@ -226,20 +260,29 @@ def cmd_import(args) -> int:
         sha = hashlib.sha256(p.read_bytes()).hexdigest()
         conn.execute(
             """INSERT INTO laws(name,issuer,doc_no,publish_date,effective_date,status,source_url,
-                                source_channel,official_check,fetched_at,sha256,file_name)
-               VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                                source_channel,official_check,fetched_at,sha256,file_name,note)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(name) DO UPDATE SET
                  issuer=excluded.issuer, doc_no=excluded.doc_no,
                  publish_date=excluded.publish_date, effective_date=excluded.effective_date,
                  status=excluded.status, source_url=excluded.source_url,
                  source_channel=excluded.source_channel, official_check=excluded.official_check,
-                 fetched_at=excluded.fetched_at, sha256=excluded.sha256, file_name=excluded.file_name""",
+                 fetched_at=excluded.fetched_at, sha256=excluded.sha256, file_name=excluded.file_name,
+                 note=excluded.note""",
             (name, args.issuer, args.doc_no, args.publish, args.effective, args.status or "现行有效",
              args.url, args.channel, args.official_check, args.date or date.today().isoformat(),
-             sha, _store_path(p)),
+             sha, _store_path(p), getattr(args, "note", None)),
         )
         law_id = conn.execute("SELECT id FROM laws WHERE name=?", (name,)).fetchone()[0]
         conn.execute("DELETE FROM articles WHERE law_id=?", (law_id,))
+        # 同一法条可能被正文引用重复切出（如「依照第X条的规定」另起一行），
+        # 按条号去重，保留正文最长的一条
+        uniq = {}
+        for a in articles:
+            old = uniq.get(a["article_no"])
+            if old is None or len(a["text"]) > len(old["text"]):
+                uniq[a["article_no"]] = a
+        articles = list(uniq.values())
         conn.executemany(
             "INSERT INTO articles(law_id,article_no,sort_key,heading,text) VALUES(?,?,?,?,?)",
             [(law_id, a["article_no"], a["sort"], a["heading"], a["text"]) for a in articles],
@@ -254,8 +297,11 @@ def cmd_import(args) -> int:
 
 
 def cmd_query(args) -> int:
+    words = args.keyword if isinstance(args.keyword, list) else [args.keyword]
+    keyword = " ".join(words)
+    match_expr = " AND ".join(f'"{w}"' for w in words if w.strip())
     conn = open_db(args.db)
-    if has_fts(conn):
+    if has_fts(conn) and not any(too_short(w) for w in words):
         rows = conn.execute(
             """SELECT l.name, a.article_no, a.heading, a.text, l.source_url, l.fetched_at, l.official_check
                FROM articles_fts f
@@ -263,15 +309,18 @@ def cmd_query(args) -> int:
                JOIN laws l ON l.id = a.law_id
                WHERE articles_fts MATCH ? AND (? = '' OR l.name LIKE ?)
                ORDER BY bm25(articles_fts) LIMIT ?""",
-            (args.keyword, args.law or "", f"%{args.law}%" if args.law else "", args.limit),
+            (match_expr, args.law or "", f"%{args.law}%" if args.law else "", args.limit),
         ).fetchall()
     else:
+        conds = ["a.text LIKE ?"] * len(words)
+        params = [f"%{w}%" for w in words]
+        conds.append("(? = '' OR l.name LIKE ?)")
+        params += [args.law or "", f"%{args.law}%" if args.law else ""]
+        params.append(args.limit)
         rows = conn.execute(
-            """SELECT l.name, a.article_no, a.heading, a.text, l.source_url, l.fetched_at, l.official_check
-               FROM articles a JOIN laws l ON l.id = a.law_id
-               WHERE a.text LIKE ? AND (? = '' OR l.name LIKE ?)
-               LIMIT ?""",
-            (f"%{args.keyword}%", args.law or "", f"%{args.law}%" if args.law else "", args.limit),
+            "SELECT l.name, a.article_no, a.heading, a.text, l.source_url, l.fetched_at, l.official_check "
+            "FROM articles a JOIN laws l ON l.id = a.law_id WHERE " + " AND ".join(conds) + " LIMIT ?",
+            params,
         ).fetchall()
 
     if args.json:
@@ -282,7 +331,7 @@ def cmd_query(args) -> int:
         return 0 if rows else 1
 
     if not rows:
-        print(f"未命中：{args.keyword}（本地库无此内容，请联网检索或补充导入）")
+        print(f"未命中：{keyword}（本地库无此内容，请联网检索或补充导入）")
         return 1
     for law, no, heading, text, url, fetched, check in rows:
         print(f"\n【{law}】{no}" + (f"  〔{heading}〕" if heading else ""))
@@ -315,11 +364,85 @@ def cmd_stats(args) -> int:
     conn = open_db(args.db)
     laws = conn.execute("SELECT COUNT(*) FROM laws").fetchone()[0]
     arts = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
-    print(f"法规 {laws} 部，条文 {arts} 条，库：{args.db}")
+    try:
+        cards = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+    except sqlite3.OperationalError:
+        cards = 0
+    print(f"法规 {laws} 部，条文 {arts} 条，结案卡片 {cards} 张，库：{args.db}")
     for name, n, fetched in conn.execute(
         """SELECT l.name, COUNT(a.id), l.fetched_at FROM laws l
            LEFT JOIN articles a ON a.law_id=l.id GROUP BY l.id ORDER BY l.id"""):
         print(f"  - {name}：{n} 条（导入 {fetched}）")
+    return 0
+
+
+def cmd_card_add(args) -> int:
+    """登记结案卡片：把一次办案的判断沉淀成可检索的东西。"""
+    conn = open_db(args.db)
+    conn.executescript(CARDS_SCHEMA)
+    rows = []
+    if args.file:
+        data = json.loads(Path(args.file).read_text(encoding="utf-8"))
+        rows = data if isinstance(data, list) else [data]
+    else:
+        rows = [{
+            "case_no": args.case_no, "cause": args.cause, "issues": args.issues,
+            "holding": args.holding, "our_side": args.our_side, "key_point": args.key_point,
+            "source": args.source, "quote": args.quote, "tags": args.tags,
+        }]
+    for r in rows:
+        conn.execute(
+            """INSERT INTO cards(case_no,cause,issues,holding,our_side,key_point,source,quote,tags,created_at)
+               VALUES(?,?,?,?,?,?,?,?,?,?)""",
+            (r.get("case_no"), r.get("cause"), r.get("issues"), r.get("holding"), r.get("our_side"),
+             r.get("key_point"), r.get("source"), r.get("quote"), r.get("tags"),
+             r.get("created_at") or date.today().isoformat()),
+        )
+    conn.commit()
+    conn.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
+    conn.commit()
+    print(f"已登记 {len(rows)} 张卡片")
+    return 0
+
+
+def cmd_card_query(args) -> int:
+    conn = open_db(args.db)
+    try:
+        if too_short(args.keyword):
+            raise sqlite3.OperationalError("short")
+        rows = conn.execute(
+            """SELECT c.case_no,c.cause,c.issues,c.holding,c.key_point,c.quote,c.source,c.created_at
+               FROM cards_fts f JOIN cards c ON c.id=f.rowid
+               WHERE cards_fts MATCH ? ORDER BY bm25(cards_fts) LIMIT ?""",
+            (args.keyword, args.limit),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = conn.execute(
+            """SELECT case_no,cause,issues,holding,key_point,quote,source,created_at FROM cards
+               WHERE cause LIKE ? OR issues LIKE ? OR key_point LIKE ? OR quote LIKE ? LIMIT ?""",
+            tuple([f"%{args.keyword}%"] * 4 + [args.limit]),
+        ).fetchall()
+    if not rows:
+        print(f"未命中卡片：{args.keyword}")
+        return 1
+    for r in rows:
+        print(f"\n【{r[1] or '-'}】{r[0] or '未记案号'}（{r[7]}）")
+        if r[2]: print(f"  争点：{r[2]}")
+        if r[3]: print(f"  裁判：{r[3]}")
+        if r[4]: print(f"  我方要点：{r[4]}")
+        if r[5]: print(f"  摘录：{r[5][:80]}")
+        if r[6]: print(f"  来源：{r[6]}")
+    return 0
+
+
+def cmd_card_list(args) -> int:
+    conn = open_db(args.db)
+    conn.executescript(CARDS_SCHEMA)
+    rows = conn.execute("SELECT case_no,cause,key_point,created_at FROM cards ORDER BY id DESC LIMIT ?",
+                        (args.limit,)).fetchall()
+    print(f"卡片 {conn.execute('SELECT COUNT(*) FROM cards').fetchone()[0]} 张")
+    for r in rows:
+        print(f"  - {r[1] or '-'}｜{r[0] or '未记案号'}｜{(r[2] or '')[:30]}｜{r[3]}")
     return 0
 
 
@@ -342,6 +465,7 @@ def cmd_seed(args) -> int:
         args.status, args.url = e.get("status"), e.get("url")
         args.channel = e.get("channel", "官方页面")
         args.official_check = e.get("official_check", "未核")
+        args.note = e.get("note")
         args.date = e.get("fetched_at")
         cmd_import(args)
         ok += 1
@@ -388,11 +512,12 @@ def main(argv: list[str]) -> int:
     p.add_argument("--url")
     p.add_argument("--channel", default="官方页面")
     p.add_argument("--official-check", default="未核")
+    p.add_argument("--note", help="来源与限制说明")
     p.add_argument("--date")
     p.set_defaults(func=cmd_import)
 
     q = sub.add_parser("query", help="全文检索")
-    q.add_argument("keyword")
+    q.add_argument("keyword", nargs="+", help="一个或多个关键词（自动按 AND 组合）")
     q.add_argument("--law")
     q.add_argument("--limit", type=int, default=5)
     q.add_argument("--json", action="store_true")
@@ -406,6 +531,21 @@ def main(argv: list[str]) -> int:
     sd = sub.add_parser("seed", help="按 data/manifest.json 批量导入")
     sd.add_argument("--manifest", default=str(ROOT / "data" / "manifest.json"))
     sd.set_defaults(func=cmd_seed)
+
+    ca = sub.add_parser("card-add", help="登记结案卡片")
+    ca.add_argument("--file", help="JSON 文件（单条或数组）")
+    ca.add_argument("--case-no"); ca.add_argument("--cause"); ca.add_argument("--issues")
+    ca.add_argument("--holding"); ca.add_argument("--our-side"); ca.add_argument("--key-point")
+    ca.add_argument("--source"); ca.add_argument("--quote"); ca.add_argument("--tags")
+    ca.set_defaults(func=cmd_card_add)
+
+    cq = sub.add_parser("card-query", help="检索卡片")
+    cq.add_argument("keyword"); cq.add_argument("--limit", type=int, default=5)
+    cq.set_defaults(func=cmd_card_query)
+
+    cl = sub.add_parser("card-list", help="卡片列表")
+    cl.add_argument("--limit", type=int, default=10)
+    cl.set_defaults(func=cmd_card_list)
 
     sub.add_parser("stats", help="库概况").set_defaults(func=cmd_stats)
     sub.add_parser("verify", help="校验导入文件与库内哈希").set_defaults(func=cmd_verify)
