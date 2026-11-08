@@ -348,8 +348,72 @@ def cmd_query(args) -> int:
     return 0
 
 
+ABBREV = {
+    "刑诉法": "刑事诉讼法", "民诉法": "民事诉讼法", "行诉法": "行政诉讼法",
+    "刑诉": "刑事诉讼法", "民诉": "民事诉讼法", "行诉": "行政诉讼法",
+    "公司法解释": "公司法", "公司法规定": "公司法",
+}
+
+
+def resolve_laws(conn, hint: str) -> list[str]:
+    """把「民诉法解释」「公司法解释（二）」这类简称解析到法规全称。"""
+    def q(sql, *params):
+        return [r[0] for r in conn.execute(sql, params).fetchall()]
+
+    if not hint:
+        return []
+    rows = q("SELECT name FROM laws WHERE name LIKE ?", f"%{hint}%")
+    if rows:
+        return rows
+
+    for short, full in ABBREV.items():
+        if hint.startswith(short):
+            hint = full + hint[len(short):]
+            break
+
+    m = re.search(r"[（(]([一二三四五六七八九十]+)[）)]", hint)
+    bracket = m.group(1) if m else ""
+    stem = re.sub(r"[（(][一二三四五六七八九十]+[）)]", "", hint)
+    stem = re.sub(r"(解释|规定|条例|办法|规则)$", "", stem).strip() or stem
+
+    sql = "SELECT name FROM laws WHERE name LIKE ?"
+    params = [f"%{stem}%"]
+    if bracket:
+        sql += " AND (name LIKE ? OR name LIKE ?)"
+        params += [f"%（{bracket}）%", f"%({bracket})%"]
+    if stem.endswith("法") and not bracket:
+        sql += " AND name LIKE ?"
+        params.append("%解释%")
+    rows = q(sql, *params)
+    if rows:
+        return rows
+
+    if len(hint) >= 4:
+        return q("SELECT name FROM laws WHERE name LIKE ?", f"%{hint[:4]}%")
+    return []
+
+
 def cmd_article(args) -> int:
     conn = open_db(args.db)
+    names = resolve_laws(conn, args.law)
+    if names:
+        placeholders = ",".join("?" * len(names))
+        rows = conn.execute(
+            f"""SELECT a.article_no, a.heading, a.text, l.name, l.source_url, l.fetched_at, l.official_check,
+                       l.publish_date, l.effective_date
+                FROM articles a JOIN laws l ON l.id=a.law_id
+                WHERE l.name IN ({placeholders}) AND a.article_no = ?""",
+            (*names, args.no),
+        ).fetchall()
+        if rows:
+            for no, heading, text, law, url, fetched, check, pub, eff in rows:
+                print(f"【{law}】{no}" + (f"  〔{heading}〕" if heading else ""))
+                print(text)
+                print(f"\n来源：{url or '未记录'}｜导入：{fetched}｜复核：{check}｜公布：{pub or '-'}｜施行：{eff or '-'}")
+                print(_caveat(check))
+            return 0
+        print(f"已定位到《{names[0]}》，但没有 {args.no}")
+        return 1
     rows = conn.execute(
         """SELECT a.article_no, a.heading, a.text, l.name, l.source_url, l.fetched_at, l.official_check,
                   l.publish_date, l.effective_date
