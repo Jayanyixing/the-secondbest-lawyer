@@ -33,6 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DB = ROOT / "data" / "law.sqlite"
+CARDS_DB = ROOT / "data" / "cards.sqlite"   # 含当事人信息，不进仓库
 
 CN_DIGITS = {"零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
              "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
@@ -488,7 +489,12 @@ def cmd_stats(args) -> int:
 
 
 CARD_FIELDS = ["case_no", "cause", "issues", "holding", "our_side", "key_point", "quote", "source", "tags"]
-CASE_NO_RE = re.compile(r"^[（(](?:19|20)\d{2}[）)][^\s]{2,30}号$")
+CASE_NO_RE = re.compile(
+    r"^(?:"
+    r"[（(](?:19|20)\d{2}[）)][^\s]{2,30}号"                    # 法院：（2024）京03民终16167号
+    r"|[^\s]{2,20}[［\[（(](?:19|20)\d{2}[］\]）)][^\s]{0,20}号"  # 仲裁：京朝劳人仲字［2022］第27149号
+    r")$"
+)
 MASK_RE = re.compile(r"[XxＸｘ＊*]")
 
 
@@ -722,6 +728,9 @@ def main(argv: list[str]) -> int:
     sub.add_parser("verify", help="校验导入文件与库内哈希").set_defaults(func=cmd_verify)
 
     args = ap.parse_args(argv)
+    # 卡片含当事人信息：默认写独立库，避免随仓库外泄
+    if args.cmd.startswith("card") and "--db" not in argv:
+        args.db = CARDS_DB
     return args.func(args)
 
 

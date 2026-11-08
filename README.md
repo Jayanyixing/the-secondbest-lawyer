@@ -190,6 +190,22 @@ python3 tools/lawdb.py card-add --case-no "（2023）京0105民初XXX号" \
 python3 tools/lawdb.py card-query 验收
 ```
 
+### 卡片库单独存放（不进仓库）
+
+卡片含当事人、案号、案情，**默认写入 `data/cards.sqlite`**（已 gitignore），与公开的法条库分开；`law add` 之类的法条写入仍走 `data/law.sqlite`。备份与共享请走内部渠道，不要推到公开仓库。
+
+### 扫描件怎么办
+
+判决书多为扫描 PDF，没有文本层。用 macOS Vision OCR 转文本：
+
+```bash
+PDF_PATH=/path/判决书.pdf OUT_PATH=/tmp/j.txt osascript -l JavaScript tools/ocr_pdf.js
+```
+
+约 1–2 秒/页，中文识别可用；OCR 有错字，**摘录必须回原图核对**后再入库。
+
+### 入库校验
+
 卡片入库前过校验，**整批不通过就不入库**：
 
 | 规则 | 说明 |
