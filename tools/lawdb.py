@@ -123,6 +123,51 @@ def clean_text(text: str) -> str:
     return text
 
 
+
+_CN_DIGITS = "零一二三四五六七八九"
+
+
+def cn_num(n: int) -> str:
+    """1–9999 转中文条号用字：38→三十八，105→一百零五，1260→一千二百六十。"""
+    if n <= 0:
+        return str(n)
+    units = ["", "十", "百", "千"]
+    digits = [int(d) for d in str(n)]
+    out, zero = "", False
+    for i, d in enumerate(digits):
+        pos = len(digits) - i - 1
+        if d == 0:
+            zero = True
+            continue
+        if zero and out:
+            out += "零"
+        zero = False
+        out += _CN_DIGITS[d] + units[pos]
+    if out.startswith("一十"):
+        out = out[1:]
+    return out
+
+
+def normalize_article_no(raw: str) -> str:
+    """把「38」「38条」「第38条」「第三十八条」「第38条之一」统一成库里的写法。"""
+    s = (raw or "").strip().replace(" ", "")
+    if not s:
+        return s
+    main, _, sub = s.partition("之")
+    for suffix in ("条", "款", "项"):
+        if main.endswith(suffix):
+            main = main[: -len(suffix)]
+    main = main.lstrip("第")
+    if main.isdigit():
+        main = cn_num(int(main))
+    out = f"第{main}条"
+    if sub:
+        sub = sub.strip("条第款 ")
+        if sub.isdigit():
+            sub = cn_num(int(sub))
+        out += f"之{sub}"
+    return out
+
 def parse_articles(text: str) -> list[dict]:
     """按「第X条」切条，并把最近一层的编/章/节挂到条文上。"""
     lines = [ln.strip() for ln in clean_text(text).splitlines()]
@@ -450,6 +495,7 @@ def resolve_laws(conn, hint: str) -> list[str]:
 
 
 def cmd_article(args) -> int:
+    args.no = normalize_article_no(args.no)
     conn = open_db(args.db)
     names = resolve_laws(conn, args.law)
     if names:
