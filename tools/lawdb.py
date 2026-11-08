@@ -33,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DB = ROOT / "data" / "law.sqlite"
-CARDS_DB = ROOT / "data" / "cards.sqlite"   # 含当事人信息，不进仓库
+CARDS_DB = ROOT / "data" / "cards.sqlite"   # 93 张脱敏卡，入库；全量在 cards.full.sqlite
 
 CN_DIGITS = {"零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
              "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}

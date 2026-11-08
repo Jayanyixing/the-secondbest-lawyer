@@ -1,5 +1,16 @@
 # 变更记录
 
+## 2026-11-09（v2.36.1）卡片库入库：公开 93 张脱敏版
+
+原来 `data/cards.sqlite` 整个不入库，clone 下来只有导出的 `cards.json`，跑不了 `card-query`／`card_health.py`。现在改为：
+
+- `data/cards.sqlite`（入库）：93 张脱敏卡，全 verified；已删掉含当事人姓名的 5 张（原 id 1、2、6、9、14），重建 FTS 并 VACUUM。
+- `data/cards.full.sqlite`（gitignore）：98 张本地全量，含那 5 张；体检全量用 `--db data/cards.full.sqlite`。
+- `data/cards.json` 由新的 93 张库重新 `card-export`，顺带同步了两张卡滞后未导出的 `key_point` 修改（563、1198），与库严格一致。
+- README 删掉「卡片库不进仓库」的旧说法和一句重复段落，补三份数据文件的对照表；`lawdb.py` 的 `CARDS_DB` 注释同步。
+
+校验：姓名残留 0（侯树启／张剑伦／高冬生／解新光／李玉冬／崔洪波／李国辉），FTS 检索正常（「建设工程」13 命中），card_health 0 错误，retrieval 8/8，导出与库逐条一致。
+
 ## 2026-11-09（v2.36.0）第一档四部法律用官方原件逐字比对完毕
 
 用户把 flk.npc.gov.cn 的官方 Word／PDF 原件放到本机后，第一档四部法律（民法典、公司法、证券法、劳动合同法）全部做完了逐条比对。

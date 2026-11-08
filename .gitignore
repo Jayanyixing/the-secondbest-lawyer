@@ -5,6 +5,6 @@ __pycache__/
 data/*.sqlite-wal
 data/*.sqlite-shm
 templates/BULK-GENERATION-PROMPT.md
-data/cards.sqlite
+data/cards.full.sqlite
 reports/
 data/credits.json
