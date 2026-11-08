@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2026-11-08（v2.17.0）第二批建工卡复核入库
+
+- 复核案例三至六：4/4 摘录在官方页命中，偏移 2270／3044／3666／4344，与提供方记录完全一致 → `verified`。
+- 卡片库 22 张：`verified` 6（建工典型案例 01–06）、`pending` 16（含公报案例 1 张、OCR 卷宗 15 张）。
+- `card-query --status verified|pending`：状态过滤下推到 SQL，避免 LIMIT 先把待核卡片筛出来。
+- **公报案例维持 pending**：`gongbao.court.gov.cn` 302 自跳空转，检察日报理论版页面仅 873 字索引未命中；转载站（cnlawweb）命中也不作为已核依据——否则等于承认二手文本等同公报原文。
+
 ## 2026-11-08（v2.16.0）摘录核验状态列
 
 - `cards` 表新增 `verify_status`（默认 `pending`），配 `card-verify` 命令改 `verified`；老库自动补列。

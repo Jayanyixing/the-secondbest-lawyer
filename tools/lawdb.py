@@ -607,14 +607,16 @@ def cmd_card_query(args) -> int:
         rows = conn.execute(
             """SELECT c.case_no,c.cause,c.issues,c.holding,c.key_point,c.quote,c.source,c.created_at,c.verify_status
                FROM cards_fts f JOIN cards c ON c.id=f.rowid
-               WHERE cards_fts MATCH ? ORDER BY bm25(cards_fts) LIMIT ?""",
-            (args.keyword, args.limit),
+               WHERE cards_fts MATCH ? AND (? = '' OR c.verify_status = ?)
+               ORDER BY bm25(cards_fts) LIMIT ?""",
+            (args.keyword, args.status or "", args.status or "", args.limit),
         ).fetchall()
     except sqlite3.OperationalError:
         rows = conn.execute(
             """SELECT case_no,cause,issues,holding,key_point,quote,source,created_at,verify_status FROM cards
-               WHERE cause LIKE ? OR issues LIKE ? OR key_point LIKE ? OR quote LIKE ? LIMIT ?""",
-            tuple([f"%{args.keyword}%"] * 4 + [args.limit]),
+               WHERE (cause LIKE ? OR issues LIKE ? OR key_point LIKE ? OR quote LIKE ?)
+                 AND (? = '' OR verify_status = ?) LIMIT ?""",
+            tuple([f"%{args.keyword}%"] * 4 + [args.status or "", args.status or "", args.limit]),
         ).fetchall()
     if not rows:
         print(f"未命中卡片：{args.keyword}")
@@ -756,6 +758,7 @@ def main(argv: list[str]) -> int:
 
     cq = sub.add_parser("card-query", help="检索卡片")
     cq.add_argument("keyword"); cq.add_argument("--limit", type=int, default=5)
+    cq.add_argument("--status", choices=["verified", "pending"], help="只看已核／待核")
     cq.set_defaults(func=cmd_card_query)
 
     cv = sub.add_parser("card-verify", help="标记摘录核验状态")

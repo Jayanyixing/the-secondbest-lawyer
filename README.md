@@ -218,6 +218,11 @@ PDF_PATH=/path/判决书.pdf OUT_PATH=/tmp/j.txt osascript -l JavaScript tools/o
 
 `source` 统一写「来源名｜URL｜抓取日期」，单张卡片自带可核验信息，不依赖外部清单。
 
+```bash
+lawdb.py card-query 施工 --status verified   # 只看已回原文核过的
+lawdb.py card-query 施工 --status pending    # 只看待核
+```
+
 从判决书抽卡的顺序与反例见 [`templates/card-extraction.md`](templates/card-extraction.md)。
 
 ## 评测：跑过才有分数
