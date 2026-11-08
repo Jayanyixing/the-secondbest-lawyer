@@ -487,10 +487,15 @@ def cmd_stats(args) -> int:
     conn = open_db(args.db)
     laws = conn.execute("SELECT COUNT(*) FROM laws").fetchone()[0]
     arts = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+    cards = 0
     try:
-        cards = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+        if CARDS_DB.exists():
+            cc = sqlite3.connect(CARDS_DB)
+            cards = cc.execute("SELECT COUNT(*) FROM cards WHERE verify_status='verified'").fetchone()[0]
+            pend = cc.execute("SELECT COUNT(*) FROM cards WHERE verify_status!='verified'").fetchone()[0]
+            cards = f"{cards}（另 {pend} 张待核）"
     except sqlite3.OperationalError:
-        cards = 0
+        pass
     print(f"法规 {laws} 部，条文 {arts} 条，结案卡片 {cards} 张，库：{args.db}")
     for name, n, fetched in conn.execute(
         """SELECT l.name, COUNT(a.id), l.fetched_at FROM laws l
