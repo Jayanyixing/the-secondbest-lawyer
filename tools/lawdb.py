@@ -487,11 +487,34 @@ def cmd_stats(args) -> int:
     return 0
 
 
+CARD_FIELDS = ["case_no", "cause", "issues", "holding", "our_side", "key_point", "quote", "source", "tags"]
+CASE_NO_RE = re.compile(r"^[（(](?:19|20)\d{2}[）)][^\s]{2,30}号$")
+MASK_RE = re.compile(r"[XxＸｘ＊*]")
+
+
+def validate_card(c: dict) -> list[str]:
+    """卡片入库前的硬校验。任何一条不过，整批不入库。"""
+    errs = [f"缺字段 {f}" for f in CARD_FIELDS if not str(c.get(f) or "").strip()]
+    quote = str(c.get("quote") or "").strip()
+    if quote and not 8 <= len(quote) <= 60:
+        errs.append(f"摘录长度 {len(quote)} 字（要求 8–60，必须是原文，概述不算）")
+    no = str(c.get("case_no") or "").strip()
+    if no and not CASE_NO_RE.match(no):
+        errs.append(f"案号格式不符：{no}（应为「（年份）…号」）")
+    if no and not MASK_RE.search(no):
+        errs.append(f"案号未脱敏：{no}（须保留 X 或 ＊ 作遮罩）")
+    side = str(c.get("our_side") or "").strip()
+    if side and side not in ("原告", "被告", "第三人", "上诉人", "被上诉人", "申请人", "被申请人",
+                             "再审申请人", "被申请人（再审）", "辩护人", "被害人代理", "其他"):
+        errs.append(f"立场取值不规范：{side}")
+    return errs
+
+
 def cmd_card_add(args) -> int:
-    """登记结案卡片：把一次办案的判断沉淀成可检索的东西。"""
+    """登记结案卡片。整批校验通过才入库；重复（同案号+同争点）跳过。"""
     conn = open_db(args.db)
     conn.executescript(CARDS_SCHEMA)
-    rows = []
+
     if args.file:
         data = json.loads(Path(args.file).read_text(encoding="utf-8"))
         rows = data if isinstance(data, list) else [data]
@@ -501,7 +524,39 @@ def cmd_card_add(args) -> int:
             "holding": args.holding, "our_side": args.our_side, "key_point": args.key_point,
             "source": args.source, "quote": args.quote, "tags": args.tags,
         }]
+
+    problems, seen, batch_dupes = [], set(), set()
+    for i, r in enumerate(rows, start=1):
+        errs = validate_card(r)
+        if errs:
+            problems.append((i, r.get("case_no") or "-", errs))
+        key = (str(r.get("case_no") or "").strip(), str(r.get("issues") or "").strip())
+        if key in seen:
+            batch_dupes.add(key)
+        seen.add(key)
+
+    if batch_dupes:
+        for no, issue in batch_dupes:
+            problems.append((0, no, [f"批次内重复：案号 {no} + 争点「{issue}」"]))
+
+    if problems:
+        print(f"校验未通过：{len(problems)} 处，整批不入库")
+        for i, no, errs in problems:
+            where = f"第 {i} 条" if i else "批次"
+            print(f"  - {where}（{no}）：" + "；".join(errs))
+        return 1
+
+    inserted = skipped = 0
     for r in rows:
+        key = (str(r.get("case_no") or "").strip(), str(r.get("issues") or "").strip())
+        exists = conn.execute(
+            "SELECT id FROM cards WHERE case_no=? AND issues=?", key
+        ).fetchone()
+        if exists:
+            if not args.replace:
+                skipped += 1
+                continue
+            conn.execute("DELETE FROM cards WHERE id=?", (exists[0],))
         conn.execute(
             """INSERT INTO cards(case_no,cause,issues,holding,our_side,key_point,source,quote,tags,created_at)
                VALUES(?,?,?,?,?,?,?,?,?,?)""",
@@ -509,10 +564,14 @@ def cmd_card_add(args) -> int:
              r.get("key_point"), r.get("source"), r.get("quote"), r.get("tags"),
              r.get("created_at") or date.today().isoformat()),
         )
+        inserted += 1
     conn.commit()
     conn.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
     conn.commit()
-    print(f"已登记 {len(rows)} 张卡片")
+    msg = f"已登记 {inserted} 张卡片"
+    if skipped:
+        msg += f"，跳过 {skipped} 张已存在（同案号+同争点）"
+    print(msg)
     return 0
 
 
@@ -648,6 +707,7 @@ def main(argv: list[str]) -> int:
     ca.add_argument("--case-no"); ca.add_argument("--cause"); ca.add_argument("--issues")
     ca.add_argument("--holding"); ca.add_argument("--our-side"); ca.add_argument("--key-point")
     ca.add_argument("--source"); ca.add_argument("--quote"); ca.add_argument("--tags")
+    ca.add_argument("--replace", action="store_true", help="同案号+同争点已存在时覆盖（默认跳过）")
     ca.set_defaults(func=cmd_card_add)
 
     cq = sub.add_parser("card-query", help="检索卡片")

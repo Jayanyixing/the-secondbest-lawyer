@@ -190,7 +190,16 @@ python3 tools/lawdb.py card-add --case-no "（2023）京0105民初XXX号" \
 python3 tools/lawdb.py card-query 验收
 ```
 
-卡片里的摘录同样受 `citation.md` 约束：没有原文就不许写摘录。
+卡片入库前过校验，**整批不通过就不入库**：
+
+| 规则 | 说明 |
+|---|---|
+| 九字段必填 | case_no / cause / issues / holding / our_side / key_point / quote / source / tags |
+| 摘录 8–60 字 | 必须是原文，概述不算 |
+| 案号须脱敏且合格式 | 「（年份）…号」，且保留 X / ＊ 遮罩 |
+| 同案号+同争点不重复 | 批次内和库内双向查；重复默认跳过，`--replace` 覆盖 |
+
+从判决书抽卡的顺序与反例见 [`templates/card-extraction.md`](templates/card-extraction.md)。
 
 ## 评测：跑过才有分数
 
