@@ -7,3 +7,4 @@ data/*.sqlite-shm
 templates/BULK-GENERATION-PROMPT.md
 data/cards.sqlite
 reports/
+data/credits.json

@@ -177,6 +177,24 @@ python3 tools/docgen.py risk      --input templates/risk.sample.json      --out 
 
 生成后脚本会提示还有几处 `【待补】` 占位符——**没替换完不许交出去**。证据目录自动排成表格（序号／名称／证明内容／页数／原件或复印件／备注）。
 
+## 投标：从采购文件到响应矩阵
+
+标书废标多来自漏条和低级不一致，两件事都能机器查：
+
+```bash
+# 1. 采购文件 → 响应矩阵骨架（资格性／实质性／评分项分开）
+python3 tools/tender_matrix.py 采购文件/ --body 标书/ --out matrix.csv
+
+# 2. 标书一致性：大写与小写、跨文件总价、同一日期、暗标文档属性
+python3 tools/tender_consistency.py 标书/ --anonymous
+```
+
+`tender_matrix.py` 按 6 字片段重合率标「已应答／弱匹配／未找到」，未覆盖条目单列；分类靠关键词，必有误判，**以采购文件和评标办法原文为准，工具只保证不漏条**。
+
+`tender_consistency.py` 查的是形式矛盾：大写金额与数字对不上、投标总价在不同文件里不同、同一截止时间两个日期、Word 属性里残留作者名。金额是否合理、业绩是否真实仍要人判断。
+
+业绩素材单独存 `data/credits.json`（样例见 `data/credits.example.json`），每条记可披露范围与授权状态；投标时按采购要求匹配，输出「可用／需授权／不可用」——缺口由匹配算出，而不是临时回忆该不该编。
+
 ## 结案卡片：把判断沉淀下来
 
 办过的案子不该只用一次。`lawdb card-add` 把「争点 → 裁判要点 → 我方胜负手 → 摘录」存进同一个库，`lawdb card-query` 按关键词召回：
