@@ -526,9 +526,11 @@ RULE_ID_RE = re.compile(r"《[^》]{2,50}》|纪要|指导意见|批复|会议�
 def validate_card(c: dict) -> list[str]:
     """卡片入库前的硬校验。任何一条不过，整批不入库。"""
     errs = [f"缺字段 {f}" for f in CARD_FIELDS if not str(c.get(f) or "").strip()]
+    kind_hint = str(c.get("kind") or "judgment").strip()
+    hi = 120 if kind_hint == "rule" else 60
     quote = str(c.get("quote") or "").strip()
-    if quote and not 8 <= len(quote) <= 60:
-        errs.append(f"摘录长度 {len(quote)} 字（要求 8–60，必须是原文，概述不算）")
+    if quote and not 8 <= len(quote) <= hi:
+        errs.append(f"摘录长度 {len(quote)} 字（{kind_hint} 要求 8–{hi}，必须是原文，概述不算）")
     kind = str(c.get("kind") or "judgment").strip()
     if kind not in ("judgment", "rule"):
         errs.append(f"kind 取值不合规：{kind}（judgment / rule）")
