@@ -653,6 +653,36 @@ def cmd_card_query(args) -> int:
     return 0
 
 
+def cmd_card_review(args) -> int:
+    """批量复核：拿 pending 卡的摘录去快照／本地法条库里找，命中即标 verified。"""
+    conn = open_db(args.db)
+    ensure_cards_schema(conn)
+    snaps = sorted(Path(args.snapshots).glob("*.txt")) if Path(args.snapshots).exists() else []
+    laws = sorted((ROOT / "data" / "sources" / "lawrefbook").glob("*.md"))
+    corpus = {}
+    for f in snaps + laws:
+        corpus[f.name] = norm_quote(f.read_text(encoding="utf-8", errors="ignore"))
+
+    rows = conn.execute("SELECT id, case_no, issues, quote, source, kind FROM cards WHERE verify_status!='verified'").fetchall()
+    ok, miss = [], []
+    for cid, no, issues, quote, source, kind in rows:
+        q = norm_quote(quote or "")
+        hit = next((name for name, text in corpus.items() if q and q in text), None)
+        if hit:
+            conn.execute("UPDATE cards SET verify_status='verified', source=source||? WHERE id=?",
+                         (f"｜复核命中快照/本地库：{hit}", cid))
+            ok.append((cid, no, hit))
+        else:
+            miss.append((cid, no, issues[:30]))
+    conn.commit()
+    print(f"复核：命中并标 verified {len(ok)} 张；仍未命中 {len(miss)} 张")
+    for cid, no, hit in ok:
+        print(f"  ✓ {cid} {no[:26]} ← {hit}")
+    for cid, no, iss in miss:
+        print(f"  ✗ {cid} {no[:26]} | {iss}")
+    return 0 if not miss else 1
+
+
 def cmd_card_verify(args) -> int:
     """把卡片的摘录核验状态置为 verified / pending。"""
     conn = open_db(args.db)
@@ -784,6 +814,10 @@ def main(argv: list[str]) -> int:
     cq.add_argument("--status", choices=["verified", "pending"], help="只看已核／待核")
     cq.add_argument("--kind", choices=["judgment", "rule"], help="只看判例卡／规则卡")
     cq.set_defaults(func=cmd_card_query)
+
+    cr = sub.add_parser("card-review", help="批量复核 pending 卡（对照快照/本地库）")
+    cr.add_argument("--snapshots", default=str(ROOT / "templates" / "snapshots"))
+    cr.set_defaults(func=cmd_card_review)
 
     cv = sub.add_parser("card-verify", help="标记摘录核验状态")
     cv.add_argument("--case-no", required=True, help="案号（支持模糊匹配）")

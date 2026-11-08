@@ -7,3 +7,4 @@ data/*.sqlite-shm
 data/cards.sqlite
 data/cards.sqlite-wal
 data/cards.sqlite-shm
+templates/BULK-GENERATION-PROMPT.md
