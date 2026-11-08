@@ -24,19 +24,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LAW_DB = ROOT / "data" / "law.sqlite"
 
-# tags 首项 → 应有案由；用于一致性检查
+# tags 首项 → 案由关键词族；首项与案由必须同族，否则说明标签比案由还粗
+# 只做「同族/不同族」判断，不追求字面相等：商品房预售合同纠纷属于买卖族，
+# 地面施工、地下设施损害责任纠纷属于侵权族——这些是更具体的案由，不是错。
 TAG2CAUSE = {
-    "建工": "建设工程施工合同纠纷", "工程": "建设工程施工合同纠纷",
-    "买卖": "买卖合同纠纷", "消费": "买卖合同纠纷",
-    "劳动": "劳动争议", "工伤": "劳动争议", "新业态": "劳动争议",
-    "竞业": "竞业限制纠纷", "公司": "公司纠纷", "股权": "公司纠纷",
-    "担保": "担保纠纷", "保证": "保证合同纠纷", "抵押": "担保纠纷",
-    "执行": "执行程序", "破产": "破产纠纷",
-    "商标": "知识产权纠纷", "专利": "知识产权纠纷",
-    "著作权": "知识产权纠纷", "知产": "知识产权纠纷",
-    "侵权": "侵权责任纠纷", "租赁": "房屋租赁合同纠纷",
-    "借贷": "民间借贷纠纷", "保险": "保险纠纷",
-    "合同": "合同纠纷", "商品房": "商品房预售合同纠纷",
+    "建工": ("建设工程",), "工程": ("建设工程",),
+    "分包": ("建设工程",), "挂靠": ("建设工程",),
+    "买卖": ("买卖", "商品房"), "消费": ("买卖",),
+    "商品房": ("商品房",),
+    "劳动": ("劳动", "竞业", "工伤"), "工伤": ("劳动", "工伤"),
+    "竞业": ("竞业", "劳动"), "新业态": ("劳动", "保险"),
+    "公司": ("公司", "股权"), "股权": ("公司", "股权"),
+    "担保": ("担保", "保证"), "保证": ("保证", "担保"), "抵押": ("担保", "抵押"),
+    "保全": ("保全", "执行"),
+    "执行": ("执行",), "破产": ("破产",),
+    "知产": ("知识产权", "商标", "专利", "著作权"),
+    "商标": ("商标",), "专利": ("专利",), "著作权": ("著作权",),
+    "侵权": ("侵权", "责任纠纷"), "租赁": ("租赁",),
+    "借贷": ("借贷",), "保险": ("保险",), "合同": ("合同",),
 }
 
 # 语义越界的可疑措辞：条文里没有的前提，key_point 却写成硬条件
@@ -140,11 +145,14 @@ def main(argv: list[str]) -> int:
                 conflicts.append((a[0], b[0], a[2][:32]))
 
     cause_mismatch = []
+    composite_cause = []
     for cid, cause, tags in conn.execute("SELECT id, cause, tags FROM cards"):
         first = (tags or "").split(",")[0].strip()
-        want = TAG2CAUSE.get(first)
-        if want and cause and want not in cause and cause not in want:
-            cause_mismatch.append((cid, cause[:18], first, want))
+        family = TAG2CAUSE.get(first)
+        if family and cause and not any(k in cause for k in family):
+            cause_mismatch.append((cid, cause[:18], first, "／".join(family)))
+        if cause and "/" in cause:
+            composite_cause.append((cid, cause[:24]))
 
     overclaim = []
     for cid, kp in conn.execute("SELECT id, key_point FROM cards WHERE kind='rule'"):
@@ -161,7 +169,8 @@ def main(argv: list[str]) -> int:
     if args.json:
         print(json.dumps(dict(ok=ok, misplaced=misplaced, missing=missing,
                              conflicts=conflicts, placeholder=placeholder,
-                             cause_mismatch=cause_mismatch, overclaim=overclaim),
+                             cause_mismatch=cause_mismatch, composite_cause=composite_cause,
+                             overclaim=overclaim),
                          ensure_ascii=False, indent=2))
     else:
         print(f"规则卡 {len(rows)} 张：条号与引文一致 {ok} 张")
@@ -178,9 +187,13 @@ def main(argv: list[str]) -> int:
             for cid, w, kp in overclaim[:8]:
                 print(f"  ? #{cid} 「{w}」 {kp}")
         if cause_mismatch:
-            print(f"\n提示：案由比标签更具体或需核对 {len(cause_mismatch)} 张（不是错误）：")
+            print(f"\n提示：标签首项与案由不同族 {len(cause_mismatch)} 张（不是错误，建议调标签顺序）：")
             for cid, cause, tag, want in cause_mismatch[:12]:
-                print(f"  ! #{cid} tags[{tag}] 应为「{want}」，现为「{cause}」")
+                print(f"  ! #{cid} 首标签「{tag}」≠ 案由「{cause}」（{want} 族）")
+        if composite_cause:
+            print(f"\n提示：案由带「/」{len(composite_cause)} 张，检索与统计会分叉，建议取其一：")
+            for cid, cause in composite_cause:
+                print(f"  ! #{cid} {cause}")
         if placeholder:
             print(f"\n占位值 {len(placeholder)} 张（cause 不是案由）：")
             for cid, cno, cause in placeholder:
