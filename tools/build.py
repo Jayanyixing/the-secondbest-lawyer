@@ -105,11 +105,12 @@ def check_readme_numbers() -> list[str]:
 
     run = subprocess.run(
         [sys.executable, str(ROOT / "tools" / "test_citation_lint.py")],
-        capture_output=True, text=True, cwd=ROOT,
+        capture_output=True, text=True, encoding="utf-8", cwd=ROOT,
     )
     got = re.search(r"结果：(\d+)/(\d+) 条断言通过", run.stdout)
-    if not got:
-        problems.append("test_citation_lint.py 未通过，取不到断言数（先修测试）")
+    if run.returncode != 0 or not got or got.group(1) != got.group(2):
+        detail = got.group(0) if got else "无统计输出"
+        problems.append(f"test_citation_lint.py 未通过（{detail}），请先修复测试")
     else:
         n = int(got.group(1))
         m2 = re.search(r"(\d+)/(\d+) 条断言", readme)
@@ -130,13 +131,18 @@ def strip_frontmatter(text: str) -> str:
 
 def demote(text: str, by: int = 1) -> str:
     """合并进主文档时整体降一级标题，保持层级。代码块内不动。"""
-    out, fenced = [], False
+    out, fence_ticks = [], 0
     for line in text.splitlines():
-        if line.startswith("```"):
-            fenced = not fenced
+        m_fence = re.match(r"^\s*(`{3,})", line)
+        if m_fence:
+            ticks = len(m_fence.group(1))
+            if fence_ticks == 0:
+                fence_ticks = ticks
+            elif ticks >= fence_ticks and re.fullmatch(r"\s*`+\s*", line):
+                fence_ticks = 0
             out.append(line)
             continue
-        if not fenced:
+        if fence_ticks == 0:
             m = re.match(r"^(#{1,5})(\s)", line)
             if m:
                 line = "#" * min(len(m.group(1)) + by, 6) + line[len(m.group(1)):]
@@ -163,7 +169,6 @@ def build_flat(order: list[str], variant: str) -> str:
         if name == "SKILL.md":
             chunks.append(body)
         else:
-            title = next((l.lstrip("# ") for l in body.splitlines() if l.startswith("#")), name)
             chunks.append(f"\n---\n\n<!-- 源文件：references/{name} -->\n\n{body}")
     chunks.append(
         "\n---\n\n## 使用提醒\n\n"
@@ -178,11 +183,18 @@ def build_zip(out: Path) -> Path:
     target = out / "the-secondbest-lawyer.zip"
     include_dirs = ["the-secondbest-lawyer", "tools", "eval", "data", "templates"]
     include_files = ["README.md", "CHANGELOG.md", "LICENSE", "MAINTENANCE.md"]
+    # 未脱敏全量卡片与 SQLite 事务文件绝不能进公开分发包
+    exclude_suffixes = (
+        ".sqlite-wal", ".sqlite-shm", ".sqlite-journal",
+        ".db-wal", ".db-shm", ".db-journal",
+    )
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
         for folder in include_dirs:
             base = ROOT / folder
             for path in sorted(base.rglob("*")):
                 if path.is_dir() or "__pycache__" in path.parts or path.suffix == ".pyc":
+                    continue
+                if path.name.startswith("cards.full.") or path.name.endswith(exclude_suffixes):
                     continue
                 # 隐藏目录（.workbuddy、.git 等）是本地工作数据，不进分发包
                 if any(part.startswith(".") for part in path.relative_to(base).parts):
@@ -207,6 +219,7 @@ def build_zip(out: Path) -> Path:
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="生成单文件版与技能包")
     ap.add_argument("--out", default="dist", help="输出目录，默认 dist")
+    ap.add_argument("--lite-extra", nargs="*", default=[], help="追加进精简版的模块文件名")
     args = ap.parse_args(argv)
 
     problems = check_readme_numbers()
@@ -218,8 +231,16 @@ def main(argv: list[str]) -> int:
     out = (ROOT / args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
 
+    lite_order = list(LITE_ORDER)
+    for extra in args.lite_extra:
+        if extra != "SKILL.md" and not (REFS / extra).is_file():
+            print(f"构建失败：references 里找不到 {extra}", file=sys.stderr)
+            return 1
+        if extra not in lite_order:
+            lite_order.append(extra)
+
     targets = [
-        (LITE_ORDER, "精简", out / "the-secondbest-lawyer-lite.md"),
+        (lite_order, "精简", out / "the-secondbest-lawyer-lite.md"),
         (FULL_ORDER, "完整", out / "the-secondbest-lawyer-full.md"),
     ]
     for order, variant, path in targets:

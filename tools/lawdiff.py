@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lawdb import extract_text, parse_articles  # noqa: E402
+from lawdb import cn2int, extract_text, normalize_article_no, parse_articles  # noqa: E402
 
 
 def norm(text: str) -> str:
@@ -44,15 +44,23 @@ def load(path: Path) -> tuple[dict[str, str], list[int]]:
     if path.suffix.lower() in {".md", ".markdown"}:
         text = strip_md(text)
     arts = parse_articles(text)
-    book = {a["article_no"]: norm(a["text"]) for a in arts if a["sort"] > 0}
+    # 与 lawdb.cmd_import 保持一致：同条号被正文引用重复切出时，保留正文最长的一条
+    book: dict[str, str] = {}
+    for a in arts:
+        if a["sort"] <= 0:
+            continue
+        no = normalize_article_no(a["article_no"])
+        body = norm(a["text"])
+        if no not in book or len(body) > len(book[no]):
+            book[no] = body
     nums = sorted({a["sort"] for a in arts if a["sort"] > 0})
     return book, nums
 
 
 HEAD_TAIL = re.compile(
-    r"(?:第[一二三四五六七八九十百]+(?:分)?编"
-    r"|第[一二三四五六七八九十百]+[章节]"
-    r"|附则)[^。；，、]{0,12}$"
+    r"(?:第[零〇一二三四五六七八九十百千两\d]+(?:分)?编"
+    r"|第[零〇一二三四五六七八九十百千两\d]+[章节]"
+    r"|附则)[^。；，、]{0,24}$"
 )
 
 
@@ -113,8 +121,12 @@ def main(argv: list[str]) -> int:
     if args.only:
         only = [x.strip() for x in args.only.split(",") if x.strip()]
     if only:
+        # 锚点与 --only 都可能写成「9」「第9条」「第九条」，统一成库里的写法再比对
+        only = [normalize_article_no(x) for x in only]
         a = {k: v for k, v in a.items() if k in only}
         b = {k: v for k, v in b.items() if k in only}
+        a_nums = sorted({cn2int(k.lstrip("第").split("条")[0]) for k in a})
+        b_nums = sorted({cn2int(k.lstrip("第").split("条")[0]) for k in b})
         print(f"抽查模式：{len(only)} 个锚点条号")
     print(f"A（官方）：{len(a)} 条，最大 {a_nums[-1] if a_nums else 0}")
     print(f"B（库内）：{len(b)} 条，最大 {b_nums[-1] if b_nums else 0}")

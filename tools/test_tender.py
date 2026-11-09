@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -82,7 +83,7 @@ def make_docx(path: Path, body: str, creator: str = "王某某") -> None:
 
 
 def run(args: list[str]) -> tuple[int, str]:
-    p = subprocess.run([sys.executable, *args], capture_output=True, text=True)
+    p = subprocess.run([sys.executable, *args], capture_output=True, text=True, encoding="utf-8")
     return p.returncode, p.stdout + p.stderr
 
 
@@ -110,7 +111,7 @@ def main() -> int:
 
     (tmp / "标书" / "报价表.md").write_text(QUOTE_BAD, "utf-8")
     code, out = run([str(TOOLS / "tender_consistency.py"), str(tmp / "标书")])
-    cases.append(("表格合计与分项不符被捕获", "C6" in out, out))
+    cases.append(("表格合计与分项不符被捕获", "C6" in out and code == 1, out))
 
     docx = tmp / "标书" / "暗标.docx"
     make_docx(docx, "投标总价：人民币 1200000.00 元")
@@ -130,6 +131,7 @@ def main() -> int:
         if not ok:
             print("  输出：", out.strip()[:400].replace("\n", " | "))
     print(f"结果：{len(cases) - len(failed)}/{len(cases)} 通过")
+    shutil.rmtree(tmp, ignore_errors=True)
     return 1 if failed else 0
 
 
