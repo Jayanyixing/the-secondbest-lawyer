@@ -130,7 +130,7 @@ def normalize_check(raw, out_of_vocab: list[str] | None = None) -> str:
     v = str(raw).strip()
     if v in CHECK_CANON:
         return v
-    if v in ("na", "不适用"):
+    if v in ("unknown", "na", "不适用"):
         return "na"
     if v in CHECK_VERIFIED_TEXT:
         return "verified"
@@ -140,7 +140,25 @@ def normalize_check(raw, out_of_vocab: list[str] | None = None) -> str:
         if out_of_vocab is not None:
             out_of_vocab.append(v)
         return "unverified"
-    return "unknown"
+    # 不含「核」的写法（「已比对一致」「与官方原文一致」「已验证」「已确认」
+    # 「已查证」「一致」）同样不认——不认识的写法一律按未核，并提示写进汇总。
+    if out_of_vocab is not None:
+        out_of_vocab.append(v)
+    return "unverified"
+
+
+CHECK_ALLOWED_FOREIGN = CHECK_UNVERIFIED_TEXT | {"", "na", "不适用", "unknown"}
+
+
+def check_allowed_for_channel(raw) -> bool:
+    """非官方渠道的官方复核栏：只接受未核词表、不适用或留空。
+
+    不认识的肯定写法（「已比对一致」「已验证」「基本核实」）一律不许出现，
+    否则调用方会在 R18 报错——渠道拿不出官方原文，就没有资格写「已核」。
+    """
+    if raw is None:
+        return True
+    return str(raw).strip() in CHECK_ALLOWED_FOREIGN
 
 
 def claims_official_verified(raw) -> bool:
@@ -576,17 +594,19 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         else:
             rep.warn("R0", msg)
 
-    # R18 来源渠道与官方复核矛盾：商业库/转载件不得记「已核」
+    # R18 来源渠道与官方复核矛盾：非官方渠道只能记「未核」或「不适用」或留空
     for entry in ledger:
         eid = entry.get("id") or ""
         if not eid:
             continue
-        if entry.get("channel") == "commercial" and claims_official_verified(
-            entry.get("official_check_raw") or entry.get("official_check")
+        if (entry.get("channel") or "unknown") != "official" and not check_allowed_for_channel(
+            entry.get("official_check_raw")
         ):
             rep.error(
                 "R18",
-                f"条目 {eid} 来源为商业库，却把官方复核写成「已核」；商业库只能记「未核（仅商业库或转载）」",
+                f"条目 {eid} 渠道非官方（{entry.get('channel') or '未填'}），官方复核却写成"
+                f"「{entry.get('official_check_raw') or entry.get('official_check')}」；"
+                "非官方渠道只能记「未核（仅商业库或转载）」或不适用或留空",
             )
 
     if out_of_vocab:

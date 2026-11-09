@@ -217,6 +217,19 @@ def main() -> int:
     code, out = run_fixture("commercial-verified-outofvocab.md", "commercial-verified-outofvocab.json")
     _chk(code == 1 and "[R18]" in out, f"商业库+「基本核实」应报 R18，实际 {code}", fails)
 
+    # 商业库 + 不含「核」字的肯定写法：R18 必须触发，并进未核汇总
+    nonnuclear = ["已比对一致", "与官方原文一致", "已验证", "已确认", "已查证", "一致"]
+    for v in nonnuclear:
+        _chk(cl2.normalize_check(v) == "unverified", f"「{v}」应归一为 unverified", fails)
+        _chk(not cl2.check_allowed_for_channel(v), f"「{v}」不应被非官方渠道接受", fails)
+    _chk(cl2.check_allowed_for_channel("未核（仅商业库或转载）"), "未核词表应被非官方渠道接受", fails)
+    _chk(cl2.check_allowed_for_channel(""), "留空应被接受", fails)
+    code, out = run_fixture("commercial-affirmative-nonuclear.md", "commercial-affirmative-nonuclear.json")
+    _chk(code == 1, f"商业库 + 肯定写法应阻断，实际 {code}", fails)
+    _chk(out.count("[R18]") == 6, f"六种写法应各报 R18，实际 {out.count('[R18]')}", fails)
+    _chk("官方复核未核 6 条" in out, "六种写法应进「未核 6 条」汇总", fails)
+    _chk("不在词表内" in out, "缺词表外提示", fails)
+
     # 对抗样例：每种写法都要被拦住（详见 tests/fixtures/EXPECTATIONS.md）
     code, out = run_fixture("commercial-verified-variants.md", "commercial-verified-variants.json")
     _chk(code == 1 and out.count("[R18]") == 3, f"三种「已核」变体应各报 R18，实际 {out.count('[R18]')}", fails)
