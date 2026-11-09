@@ -148,7 +148,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 | R16 | 规范类条目缺「规范效力」或「适用时点」（警告）；规范效力「未确认」却用于结论（错误）——两条独立判定，缺字段不屏蔽错误；`--strict` 下用于结论却缺「规范效力」报错 |
 | R17 | 离线稿形态不合规：缺〔草稿〕／缺「未经联网回读」声明／缺待回读清单／肯定地声称可交付（错误） |
 | R18 | 来源渠道与官方复核矛盾：商业库／转载件却记「已核」（错误） |
-| R19 | 合同审查交付的首页总数、各等级数、必改数与风险表、必改清单行数不符（`--mode self` 报错，其他模式警告） |
+| R19 | 合同审查交付的首页总数、各等级数、必改数、确定／条件式分列数与风险表、必改清单行数不符（`--mode self` 报错，其他模式警告）；条件式行未链 `E-` 编号只提示 |
 | R20 | 替换条款引用了原合同与映射表中都不存在的条款号（警告；`--strict` 报错） |
 | R21 | 风险表出现「无效／不发生效力／可撤销／可调减」等结论却没有 N-／C- 编号（启发式，仅警告） |
 
@@ -323,7 +323,7 @@ python3 tools/eval_score.py eval/scores.csv
 ## 自检：改完先跑一遍
 
 ```bash
-python3 tools/test_citation_lint.py   # 引用校验器回归，146/146 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
+python3 tools/test_citation_lint.py   # 引用校验器回归，150/150 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5

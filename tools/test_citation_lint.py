@@ -349,6 +349,19 @@ def main() -> int:
     _chk("不在词表内" not in out, "「待补材料」不得被判为词表外写法", fails)
     _chk("待补材料" in (FIXTURES / "pending-material.md").read_text(encoding="utf-8"), "样例应保留「待补材料」写法", fails)
 
+    # 条件式风险：必须与文本内确定缺陷分开计数，条件式行须链 E- 编号
+    code, out = run_fixture("conditional-risk-count.md")
+    _chk(code == 0 and "[R19]" not in out, f"确定／条件式分列与表一致应通过，实际 {code}", fails)
+    code, out = run_fixture("conditional-risk-mismatch.md")
+    _chk(code == 1 and out.count("[R19]") == 2, f"分列数不符应报 2 条 R19，实际 {out.count('[R19]')}", fails)
+    code, out = run(
+        "# 审查意见〔自查〕\n\n结论：共 1 项问题，条件式（待补材料）1 项。\n\n"
+        "| 位置与原文 | 等级与触发场景 |\n|---|---|\n"
+        "| 第 2.2 条 | **高**。触发：章程未提供，条件式（待补材料） |\n"
+    )
+    _chk("[R19]" in out and "E-xx" in out, "条件式行缺 E- 编号应提示", fails)
+    _chk(code == 0, f"缺 E- 编号只提示不阻断，实际 {code}", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

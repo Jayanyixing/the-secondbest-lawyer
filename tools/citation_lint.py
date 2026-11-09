@@ -313,6 +313,10 @@ TODO_SECTION_RE = re.compile(r"待取|线索|待补|待核")
 HEADING_RE = re.compile(r"^(#{1,6})\s*(.+?)\s*$")
 RISK_LEVEL_RE = re.compile(r"^\**\s*(高|中|低)")
 MUST_FIX_ROW_RE = re.compile(r"^必改\s*\d+")
+CONDITIONAL_RE = re.compile(r"条件式\s*[（(]\s*待补材料")
+PENDING_MATERIAL_ID_RE = re.compile(r"E-\d{1,3}")
+CONDITIONAL_COUNT_RES = [re.compile(r"条件式[^。；\n]{0,16}?(\d+)\s*项")]
+DETERMINATE_COUNT_RES = [re.compile(r"文本内(?:可)?确定(?:缺陷)?[^。；\n]{0,10}?(\d+)\s*项")]
 
 
 def parse_tables(lines: list[str]) -> list[dict]:
@@ -418,15 +422,32 @@ def check_review_counts(rep: "Report", lines: list[str], tables: list[dict], mod
         1 for t in must_tables for _, cells in t["rows"] if MUST_FIX_ROW_RE.match(cell_at(cells, 0))
     )
 
+    # 条件式（待补材料）：风险成立与否取决于未到手材料，必须链到 E- 编号
+    conditional: list[int] = []
+    for t in risk_tables:
+        for ln, cells in t["rows"]:
+            joined = " ".join(cells)
+            if not CONDITIONAL_RE.search(joined):
+                continue
+            conditional.append(ln)
+            if not PENDING_MATERIAL_ID_RE.search(joined):
+                rep.warn(
+                    "R19",
+                    f"第 {ln} 行标了「条件式（待补材料）」但没有链到待补材料编号（E-xx）；"
+                    "补上 E- 编号，否则材料缺口无从追踪",
+                )
+
     head = homepage_text(lines)
     total = first_int(TOTAL_RES, head)
     must = first_int(MUST_RES, head)
+    cond_declared = first_int(CONDITIONAL_COUNT_RES, head)
+    determinate_declared = first_int(DETERMINATE_COUNT_RES, head)
     levels: dict[str, int] = {}
     for m in LEVEL_RES[0].finditer(head):  # 「5 项属高风险」
         levels.setdefault(m.group(2), int(m.group(1)))
     for m in LEVEL_RES[1].finditer(head):  # 「高风险 5 项」
         levels.setdefault(m.group(1), int(m.group(2)))
-    if not total and not must and not levels:
+    if not total and not must and not levels and cond_declared is None and determinate_declared is None:
         rep.warn(
             "R19",
             "有风险表，但首页没解析到问题总数／必改数／分级数，无法核对（建议写成「共 N 项问题，其中高风险 a 项……必改 b 项」）",
@@ -444,6 +465,25 @@ def check_review_counts(rep: "Report", lines: list[str], tables: list[dict], mod
     for lv, num in sorted(levels.items()):
         if num != level_counts[lv]:
             bad(f"首页声明{lv}风险 {num} 项，风险表实有 {level_counts[lv]} 行；首页数字应由表计数得出")
+    cond_rows = len(conditional)
+    if determinate_declared is not None:
+        actual = total_rows - cond_rows
+        if determinate_declared != actual:
+            bad(
+                f"首页声明文本内可确定的缺陷 {determinate_declared} 项，风险表实有 {actual} 行；"
+                "条件式风险已单列，不得与确定缺陷混计"
+            )
+    if cond_declared is not None and cond_declared != cond_rows:
+        bad(f"首页声明条件式（待补材料）{cond_declared} 项，风险表实有 {cond_rows} 行")
+    if (
+        cond_declared is not None
+        and determinate_declared is not None
+        and total is not None
+        and total != cond_declared + determinate_declared
+    ):
+        bad(
+            f"首页总数为 {total}，但「确定 {determinate_declared}＋条件式 {cond_declared}」不等于总数；两处须对得上"
+        )
     if must is not None:
         if not must_tables:
             rep.warn(
