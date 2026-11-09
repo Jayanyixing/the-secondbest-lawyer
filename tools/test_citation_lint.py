@@ -362,6 +362,16 @@ def main() -> int:
     _chk("[R19]" in out and "E-xx" in out, "条件式行缺 E- 编号应提示", fails)
     _chk(code == 0, f"缺 E- 编号只提示不阻断，实际 {code}", fails)
 
+    # 内联底稿只从底稿表读，正文与风险表里的引用不重复计条
+    code, out = run_fixture("inline-ledger-dedup.md")
+    _chk("读到底稿 2 条" in out, f"风险表引用被重复计为底稿，实际：{out[:120]}", fails)
+    _chk(code == 0, f"去重后应通过，实际 {code}", fails)
+
+    # 综合样例：一次试跑的多种写法放在同一份报告里
+    code, out = run_fixture("trial-blind-review.md")
+    _chk(code == 1 and out.count("[R19]") == 3, f"综合样例应报 3 条 R19，实际 {out.count('[R19]')}", fails)
+    _chk("[R20]" in out and "[R21]" in out, "综合样例应同时命中 R20、R21", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

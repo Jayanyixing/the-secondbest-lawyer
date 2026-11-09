@@ -47,3 +47,5 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `pending-material.md` | 无 | 0（警告） | — | 材料目录写「待补材料」并列 E- 编号，不得判为词表外写法；「待取正文」另表 |
 | `conditional-risk-count.md` | 无 | 0 | — | 首页「确定 3 项＋条件式 2 项」与风险表一致，条件式行均链 E- 编号 |
 | `conditional-risk-mismatch.md` | 无 | 1 | R19 ×2 | 首页写确定 4／条件式 1，表内实为 3／2 |
+| `inline-ledger-dedup.md` | 无 | 0（警告） | R0 | 同一编号在风险表被引用 3 次、底稿表 1 条：只算 2 条（N-01、N-02） |
+| `trial-blind-review.md` | 无 | 1 | R19 ×3（另 R20／R21 为警告） | 一次试跑的写法合集：首页手填数字、替换条款引用不存在的 7.3、结论无编号、条件式风险 |

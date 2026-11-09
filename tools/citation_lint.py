@@ -578,75 +578,90 @@ def load_ledger_md(path: Path) -> list[dict]:
 
 
 INLINE_ID_RE = re.compile(r"([NCSM])\s*-\s*(\d{1,3})")
+INLINE_ID_CELL_RE = re.compile(r"^[〔\[（(]?\s*([NCSM])\s*-\s*(\d{1,3})\s*[〕\]）)]?")
+LEDGER_HEADING_RE = re.compile(r"引用底稿|底稿表|引用与底稿")
+
+
+def is_ledger_table(t: dict) -> bool:
+    """没有「引用底稿」小节时的兜底：表头带摘录／回读／编号，且首列是编号。"""
+    header = " ".join(t["header"])
+    if not re.search(r"摘录|回读|底稿", header):
+        return False
+    return any(cells and INLINE_ID_CELL_RE.match(cell_at(cells, 0)) for _, cells in t["rows"])
 
 
 def load_ledger_inline(path: Path) -> list[dict]:
-    """从交付物自身的表格里读底稿行（编号列写成 N-01 / 〔N-01〕 即可）。
+    """从交付物自身的底稿表读条目。
 
-    用于「底稿直接附在文书末尾、没有单独 ledger 文件」的常规写法：
-    只要有 N-/C-/S-/M- 编号，就按行构造条目，缺的字段留空。
+    只认「引用底稿」类小节的表，且编号必须在**首列**：正文与风险表里的
+    〔N-xx〕是引用，不是条目——把它们也当条目会把条数算多、同一编号重复计。
+    没写小节标题的老稿子退化为「表头像底稿表、首列是编号」，仍然只读首列。
     """
     lines = path.read_text(encoding="utf-8").splitlines()
+    tables = parse_tables(lines)
+    picked = [t for t in tables if LEDGER_HEADING_RE.search(t["heading"])]
+    if not picked:
+        picked = [t for t in tables if is_ledger_table(t)]
+
     entries: list[dict] = []
-    header: list[str] | None = None
-    for line in lines + [""]:
-        stripped = line.strip()
-        if not stripped.startswith("|"):
-            header = None
-            continue
-        cells = [c.strip() for c in stripped.strip("|").split("|")]
-        if all(set(c) <= set("-: ") for c in cells):
-            continue
-        ident = None
-        id_at = 0
-        for i, c in enumerate(cells):
-            m = INLINE_ID_RE.search(c.strip())
-            if m:
-                ident = f"{m.group(1)}-{int(m.group(2)):02d}"
-                id_at = i
-                break
-        if ident is None:
-            header = cells if header is None else header
-            continue
-        rest = [c for i, c in enumerate(cells) if i != id_at]
-        quote = ""
-        read_scope = "unknown"
-        for c in rest:
-            if "摘录" in c or "原文" in c:
-                pass
-            if len(c) >= 8 and not re.match(r"^(摘录来自|未回读|已回读|待取)", c) and not quote:
-                quote = c
-            if "摘录来自" in c:
-                read_scope = "excerpt"
-        id_cell = cells[id_at].strip()
-        bare = re.fullmatch(r"[〔\[（(]?[NCSM]\s*-\s*\d{1,3}[〕\]）)]?", id_cell)
-        label = (rest[0] if rest else "") if bare else id_cell
-        num = ""
-        mg = GUIDE_NO_RE.search(label)
-        if mg:
-            num = mg.group(0)
-        else:
-            mc = CASE_NO_RE.search(label)
-            if mc:
-                num = mc.group(0)
-        entries.append(
-            {
-                "id": ident,
-                "type": "",
-                "number": num,
-                "name": rest[0] if rest else "",
-                "court": "",
-                "date": "",
-                "channel": "unknown",
-                "location": "",
-                "read_scope": read_scope,
-                "quote": quote,
-                "reread": "",
-                "official_check": "unknown",
-                "effectiveness": "unknown",
-                "inline": True,
-            }
-        )
+    seen: set[str] = set()
+    for t in picked:
+        header = t["header"]
+        quote_at = next((i for i, h in enumerate(header) if "摘录" in h or "原文" in h), None)
+        scope_at = next((i for i, h in enumerate(header) if "读取范围" in h), None)
+        reread_at = next((i for i, h in enumerate(header) if "回读" in h), None)
+        for _, cells in t["rows"]:
+            first = cell_at(cells, 0).strip()
+            m = INLINE_ID_CELL_RE.match(first)
+            if not m:
+                continue
+            ident = f"{m.group(1)}-{int(m.group(2)):02d}"
+            if ident in seen:  # 同一编号多行只算一条
+                continue
+            seen.add(ident)
+            rest = cells[1:]
+            label = first[len(m.group(0)):].strip() or cell_at(cells, 1)
+            num = ""
+            mg = GUIDE_NO_RE.search(label)
+            if mg:
+                num = mg.group(0)
+            else:
+                mc = CASE_NO_RE.search(label)
+                if mc:
+                    num = mc.group(0)
+            quote = cell_at(cells, quote_at) if quote_at is not None else ""
+            if not quote:
+                quote = next(
+                    (
+                        c
+                        for c in rest
+                        if len(c) >= 8
+                        and not re.match(r"^(摘录来自|未回读|已回读|待取|待补|已核|未核|不适用)", c)
+                    ),
+                    "",
+                )
+            if scope_at is not None:
+                read_scope = pick(SCOPE_WORDS, cell_at(cells, scope_at), "unknown")
+            else:
+                read_scope = "excerpt" if "摘录来自" in " ".join(cells) else "unknown"
+            entries.append(
+                {
+                    "id": ident,
+                    "type": "",
+                    "number": num,
+                    "name": label,
+                    "court": "",
+                    "date": "",
+                    "channel": "unknown",
+                    "location": "",
+                    "read_scope": read_scope,
+                    "quote": quote,
+                    "reread": cell_at(cells, reread_at) if reread_at is not None else "",
+                    "official_check": "unknown",
+                    "effectiveness": "unknown",
+                    "inline": True,
+                }
+            )
     return entries
 
 def load_ledger(path: Path) -> list[dict]:
