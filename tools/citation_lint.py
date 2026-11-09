@@ -593,6 +593,8 @@ def load_ledger_md(path: Path) -> list[dict]:
                 "read_scope": pick(SCOPE_WORDS, get("读取范围", "范围"), "unknown"),
                 "quote": get("摘录", "原文"),
                 "reread": get("回读"),
+                # 复核状态保留原值交给 normalize_entries()→normalize_check()：pick() 只做子串包含，
+                # 「未见已核记录」「尚未完成已核比对」会先命中「已核」被判 verified，架空 CHECK_NEG_RE
                 "official_check": get("官方复核", "复核") or "unknown",
                 "effectiveness": pick(EFFECT_WORDS, get("生效", "后续"), "unknown"),
                 "norm_status": normalize_norm_status(get("规范效力")),
