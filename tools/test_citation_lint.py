@@ -335,6 +335,14 @@ def main() -> int:
     )
     _chk(code == 0 and "[R20]" not in out, f"--contract 提供原合同编号后应通过，实际 {code}", fails)
 
+    # R21 风险表里的法律结论必须挂底稿编号（启发式，只警告）
+    code, out = run_fixture("conclusion-unsourced.md")
+    _chk(code == 0, f"R21 只警告不阻断，实际 {code}", fails)
+    _chk(out.count("[R21]") == 1, f"只应提示没有编号的那一行，实际 {out.count('[R21]')} 条", fails)
+    _chk("法律判断待核" in out, "R21 提示应给出改写方式，实际未给", fails)
+    code, out = run_fixture("conclusion-unsourced.md", None, "--strict")
+    _chk(code == 0 and "[R21]" in out, f"严格模式下 R21 仍只是警告，实际 {code}", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

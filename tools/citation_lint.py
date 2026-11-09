@@ -653,6 +653,13 @@ def inside_book_title(text: str, pos: int) -> bool:
     return text.rfind("《", 0, pos) > text.rfind("》", 0, pos)
 
 
+# R21 用：这些词出现即在作法律结论，必须能指回底稿
+CONCLUSION_WORDS = ["不发生效力", "不生效", "可撤销", "可调减", "无效"]
+NO_CONCLUSION_MARKERS = ["法律判断待核", "待核（未登记依据）", "未登记依据", "待取正文", "待补材料", "本项待核"]
+SENTENCE_SPLIT = re.compile(r"[。；]")
+QUOTED_RE = re.compile(r"「[^」]*」|『[^』]*』|“[^”]*”|\"[^\"]*\"|'[^']*'")
+
+
 def check_clause_refs(
     rep: "Report", tables: list[dict], contract_text: str, strict: bool
 ) -> None:
@@ -705,6 +712,37 @@ def check_clause_refs(
                     rep.error("R20", msg)
                 else:
                     rep.warn("R20", msg)
+
+
+def check_conclusion_sources(rep: "Report", tables: list[dict]) -> None:
+    """R21：风险表里的法律结论必须挂 N-／C- 编号，否则提示。
+
+    启发式，只警告：按分句判断（。；切分），本句或前一句有引用即算挂上；
+    「」与引号内是引来的原文，不当作本报告的主张。宁可多提示，不因为
+    拿不准就放过——但绝不阻断交付。
+    """
+    risk_tables = [t for t in tables if any("等级" in h for h in t["header"])]
+    if not risk_tables:
+        return
+    for t in risk_tables:
+        for ln, cells in t["rows"]:
+            row_text = "。".join(c for c in cells if c).replace("<br>", "。").replace("<br/>", "。")
+            segs = [QUOTED_RE.sub("", s) for s in SENTENCE_SPLIT.split(row_text)]
+            for i, seg in enumerate(segs):
+                word = next((w for w in CONCLUSION_WORDS if w in seg), None)
+                if not word:
+                    continue
+                if any(k in seg for k in NO_CONCLUSION_MARKERS):
+                    continue
+                window = segs[i - 1] if i else ""
+                if find_tags(seg) or find_tags(window):
+                    continue
+                rep.warn(
+                    "R21",
+                    f"第 {ln} 行出现法律结论「{word}」但没有 N-／C- 编号："
+                    f"{seg.strip()[:40]}；补底稿编号，或改写为「法律判断待核（未登记依据）」",
+                )
+                break
 
 
 def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
@@ -840,6 +878,9 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
 
     # R20 替换条款不得引用原合同与映射表中都不存在的编号
     check_clause_refs(rep, tables, contract_text, strict)
+
+    # R21 风险表里的法律结论必须挂底稿编号（启发式，只警告）
+    check_conclusion_sources(rep, tables)
 
     # R9 复核表述与模式
     claims_review = re.search(r"已复核|经复核|独立核验|已通过独立审查", text)
