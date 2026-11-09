@@ -57,6 +57,23 @@ def normalize_norm_status(raw):
     return pick(NORM_STATUS_WORDS, raw, NORM_UNCONFIRMED)
 
 
+NEG_MARKERS = re.compile(r"(不|非|无|未|勿|别|没有|并非|不是|不得|不能|不可|尚未)")
+
+
+def affirms_claim(text: str, word: str) -> bool:
+    """正文是否**肯定地**声称了 word。
+
+    「本稿不是可交付稿」「无一条已核实」这类否定句不算声称——否则离线稿只要
+    自我否认就会被打回。判定窗口取 word 前 8 个字，窗口内出现否定词即视为否定。
+    """
+    for m in re.finditer(re.escape(word), text):
+        before = text[max(0, m.start() - 8):m.start()]
+        if NEG_MARKERS.search(before):
+            continue
+        return True
+    return False
+
+
 def normalize_entries(entries: list[dict]) -> list[dict]:
     """统一各来源（JSON / markdown 表格 / 内联）的规范效力取值。"""
     for e in entries:
@@ -467,7 +484,7 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         if not re.search(r"待回读清单|待回读条目", text):
             rep.error("R15", "离线模式要求文末给「待回读清单」（条目编号＋建议核对的官方来源）")
         for word in ("可交付", "可直接使用", "已核实", "已核（与官方原文一致）"):
-            if word in text:
+            if affirms_claim(text, word):
                 rep.error("R15", f"离线稿不得出现「{word}」：离线只能出草稿")
 
     return rep

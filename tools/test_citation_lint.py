@@ -141,6 +141,9 @@ def main() -> int:
     code, out = run_file(d / "offline-draft.md", "--mode", "offline")
     if code != 0 or "离线草稿" not in out or "可交付" in out.replace("不得标「可交付」", ""):
         fails.append(f"离线草稿应通过且不提可交付，实际 {code}：{out[-160:]}")
+    code, out = run_file(d / "offline-draft-negative.md", "--mode", "offline")
+    if code != 0:
+        fails.append(f"否定句（不是可交付／无一条已核实）应通过，实际 {code}：{out[-200:]}")
     code, out = run_file(d / "offline-draft-nomark.md", "--mode", "offline")
     if code == 0 or "〔草稿〕" not in out:
         fails.append("离线稿缺〔草稿〕应报错")
