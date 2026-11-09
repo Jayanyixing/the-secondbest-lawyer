@@ -72,13 +72,19 @@ def check_one(chk: dict, text: str, base: Path) -> tuple[bool, str]:
 
     if kind == "must_include":
         for pat in chk.get("values", []):
-            if not re.search(pat, text):
-                return False, f"缺「{pat}」"
+            try:
+                if not re.search(pat, text):
+                    return False, f"缺「{pat}」"
+            except re.error as exc:
+                return False, f"正则无效「{pat}」：{exc}"
         return True, ""
 
     if kind == "must_not_include":
         for pat in chk.get("values", []):
-            m = re.search(pat, text)
+            try:
+                m = re.search(pat, text)
+            except re.error as exc:
+                return False, f"正则无效「{pat}」：{exc}"
             if m:
                 return False, f"出现不该有的「{m.group(0)[:40]}」"
         return True, ""
@@ -91,8 +97,11 @@ def check_one(chk: dict, text: str, base: Path) -> tuple[bool, str]:
         return True, ""
 
     if kind == "max_lines":
+        try:
+            limit = int(chk["value"])
+        except (KeyError, TypeError, ValueError):
+            return False, f"max_lines 配置无效：{chk.get('value')!r}"
         n = len(text.splitlines())
-        limit = int(chk["value"])
         return (n <= limit), ("" if n <= limit else f"{n} 行 > 上限 {limit}")
 
     if kind == "case_no_allow":
@@ -104,11 +113,18 @@ def check_one(chk: dict, text: str, base: Path) -> tuple[bool, str]:
     if kind == "lint":
         mode = chk.get("mode", "self")
         strict = bool(chk.get("strict", False))
-        contract = base / chk["contract"] if chk.get("contract") else None
-        with tempfile.TemporaryDirectory() as tmp:
-            body = Path(tmp) / "answer.md"
-            body.write_text(text, encoding="utf-8")
-            rep = CL.lint(body, None, mode, strict, contract)
+        contract = None
+        if chk.get("contract"):
+            contract = base / chk["contract"]
+            if not contract.is_file():
+                return False, f"契约文件不存在：{contract}"
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                body = Path(tmp) / "answer.md"
+                body.write_text(text, encoding="utf-8")
+                rep = CL.lint(body, None, mode, strict, contract)
+        except Exception as exc:  # 单个 lint 用例失败不应拖垮整批
+            return False, f"lint 执行失败：{type(exc).__name__}: {exc}"
         codes = rule_codes(rep.errors) | rule_codes(rep.warnings)
         hits = {c: [x for x in rep.errors + rep.warnings if f"[{c}]" in x] for c in codes}
         absent = chk.get("absent", [])
@@ -122,33 +138,42 @@ def check_one(chk: dict, text: str, base: Path) -> tuple[bool, str]:
         return True, ""
 
     if kind == "docgen":
-        data = json.loads((base / chk["input"]).read_text(encoding="utf-8"))
-        blocks = DG.TEMPLATES[chk["template"]](data)
-        got = sum(blk.count("【待补") for blk in blocks)
-        want = chk.get("placeholders")
-        if want is not None and got != want:
-            return False, f"占位符 {got} 处，期望 {want} 处"
-        with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "out.docx"
-            DG.build_docx(blocks, out)
-            import zipfile
-
-            with zipfile.ZipFile(out) as zf:
-                xml_bytes = zf.read("word/document.xml")
         try:
-            ET.fromstring(xml_bytes)
-        except ET.ParseError as exc:
-            return False, f"生成的 document.xml 非法：{exc}"
-        if b"\x0c" in xml_bytes:
-            return False, "document.xml 残留换页符 \\x0c"
+            src = base / chk["input"]
+            if not src.is_file():
+                return False, f"docgen 输入不存在：{src}"
+            data = json.loads(src.read_text(encoding="utf-8"))
+            template = chk["template"]
+            if template not in DG.TEMPLATES:
+                return False, f"未知 docgen 模板：{template}"
+            blocks = DG.TEMPLATES[template](data)
+            got = sum(blk.count("【待补") for blk in blocks)
+            want = chk.get("placeholders")
+            if want is not None and got != want:
+                return False, f"占位符 {got} 处，期望 {want} 处"
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / "out.docx"
+                DG.build_docx(blocks, out)
+                import zipfile
+
+                with zipfile.ZipFile(out) as zf:
+                    xml_bytes = zf.read("word/document.xml")
+            try:
+                ET.fromstring(xml_bytes)
+            except ET.ParseError as exc:
+                return False, f"生成的 document.xml 非法：{exc}"
+            if b"\x0c" in xml_bytes:
+                return False, "document.xml 残留换页符 \\x0c"
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            return False, f"docgen 执行失败：{type(exc).__name__}: {exc}"
         return True, ""
 
     return False, f"未知断言类型 {kind!r}"
 
 
-def run_answer(case: dict, answer: Path) -> list[tuple[str, bool, str]]:
+def run_answer(case: dict, answer: Path, base: Path | None = None) -> list[tuple[str, bool, str]]:
     text = answer.read_text(encoding="utf-8")
-    base = answer.parent
+    base = base or answer.parent
     results = []
     for chk in case.get("checks", []):
         ok, detail = check_one(chk, text, base)
@@ -157,11 +182,24 @@ def run_answer(case: dict, answer: Path) -> list[tuple[str, bool, str]]:
 
 
 def load_cases(only: str | None = None) -> list[tuple[Path, dict]]:
-    out = []
+    out: list[tuple[Path, dict]] = []
+    seen: dict[str, Path] = {}
     for path in sorted(CASES.glob("*.case.json")):
-        case = json.loads(path.read_text(encoding="utf-8"))
-        if only and case.get("case_id") != only:
+        try:
+            case = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            case = {
+                "case_id": path.name.split(".")[0],
+                "title": "（用例文件无法解析）",
+                "_load_error": f"{type(exc).__name__}: {exc}",
+            }
+        cid = str(case.get("case_id") or path.name.split(".")[0])
+        if only and cid != only:
             continue
+        if cid in seen:
+            case["_duplicate"] = f"case_id 与 {seen[cid].name} 重复"
+        else:
+            seen[cid] = path
         out.append((path, case))
     return out
 
@@ -178,30 +216,45 @@ def selfcheck(only: str | None) -> int:
     for path, case in cases:
         cid = case.get("case_id", path.stem)
         title = case.get("title", "")
-        gold = path.parent / case["gold"]
-        bad = path.parent / case["bad"] if case.get("bad") else None
+        try:
+            if case.get("_load_error"):
+                raise ValueError(f"用例文件无法解析：{case['_load_error']}")
+            if case.get("_duplicate"):
+                raise ValueError(case["_duplicate"])
+            if not case.get("checks"):
+                raise ValueError("checks 为空，无法判定")
+            if not case.get("gold"):
+                raise ValueError("缺少 gold 字段")
+            if not case.get("bad"):
+                raise ValueError("缺少 bad 反例，无法判定判别力")
+            gold = path.parent / case["gold"]
+            bad = path.parent / case["bad"]
+            if not gold.is_file():
+                raise FileNotFoundError(f"金标不存在：{gold}")
+            if not bad.is_file():
+                raise FileNotFoundError(f"反例不存在：{bad}")
 
-        g = run_answer(case, gold)
-        g_pass = sum(1 for _, ok, _ in g if ok)
-        b_bad = 0
-        b_detail = ""
-        if bad is not None:
-            b = run_answer(case, bad)
+            g = run_answer(case, gold, path.parent)
+            g_pass = sum(1 for _, ok, _ in g if ok)
+            b = run_answer(case, bad, path.parent)
             b_bad = sum(1 for _, ok, _ in b if not ok)
-            first = next((f"{n}：{d}" for n, ok, d in b if not ok), "")
-            b_detail = first
+            b_detail = next((f"{n}：{d}" for n, ok, d in b if not ok), "")
 
-        discriminating = g_pass == len(g) and (bad is None or b_bad > 0)
-        total_ok += 1 if discriminating else 0
-        flag = "✓" if discriminating else "✗"
-        print(f"  {flag} {cid} {title}")
-        print(f"      金标 {g_pass}/{len(g)} 通过" + (f"｜反例被拦 {b_bad}/{len(b)} 条：{b_detail}" if bad else ""))
-        for name, ok, detail in g:
-            if not ok:
-                print(f"      金标未过 → {name}：{detail}")
-        if bad is not None and b_bad == 0:
-            print("      反例未被拦下 → 断言没咬住这一类错误")
-        if not discriminating:
+            discriminating = bool(g) and g_pass == len(g) and b_bad > 0
+            total_ok += 1 if discriminating else 0
+            flag = "✓" if discriminating else "✗"
+            print(f"  {flag} {cid} {title}")
+            print(f"      金标 {g_pass}/{len(g)} 通过｜反例被拦 {b_bad}/{len(b)} 条：{b_detail}")
+            for name, ok, detail in g:
+                if not ok:
+                    print(f"      金标未过 → {name}：{detail}")
+            if b_bad == 0:
+                print("      反例未被拦下 → 断言没咬住这一类错误")
+            if not discriminating:
+                problems.append(cid)
+        except Exception as exc:
+            print(f"  ✗ {cid} {title}")
+            print(f"      用例异常 → {type(exc).__name__}: {exc}")
             problems.append(cid)
 
     print(f"\n判别力：{total_ok}/{len(cases)} 个案例（金标全过且反例被拦）")
@@ -216,8 +269,16 @@ def grade_one(only: str, answer: Path) -> int:
     if not cases:
         print(f"没有找到案例 {only}")
         return 1
-    _, case = cases[0]
-    results = run_answer(case, answer)
+    path, case = cases[0]
+    try:
+        if case.get("_load_error"):
+            raise ValueError(f"用例文件无法解析：{case['_load_error']}")
+        if not case.get("checks"):
+            raise ValueError("checks 为空，无法判定")
+        results = run_answer(case, answer, path.parent)
+    except Exception as exc:
+        print(f"{case.get('case_id')} 执行失败：{type(exc).__name__}: {exc}")
+        return 1
     passed = sum(1 for _, ok, _ in results if ok)
     print(f"{case.get('case_id')} {case.get('title')}")
     for name, ok, detail in results:

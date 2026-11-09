@@ -1,5 +1,16 @@
 # 变更记录
 
+## 2026-11-09（v2.39.28）投标四件套与 eval_cases 的 27 处边界修复
+
+- **tender_matrix.py**：中文序号 `ID_RE` 补第 3 捕获组，修「一、投标人必须…」的 `IndexError`；`--min-score` 真正传入覆盖判定；保留含 ★／实质性禁令的短条款；缺文件、坏 docx 跳过并提示；文本 UTF-8→GB18030 回退；JSON 增加 `rows_total`／`rows_truncated`，不再静默截断。
+- **tender_consistency.py**：C1 改为同分句内就近金额配对，不再把「违约金 5 万；总价壹佰万」误报；C6 优先金额列、识别前两列合计／小计、支持单表多段小计重置；C4 增读 `docProps/app.xml` 与 `custom.xml`；C5 把最高限价／预算／保证金跨文件差异降为提示，投标总价冲突仍报错误；C3 用 `date()` 校验日历；文件读取与 GBK 兜底。
+- **tender_score.py**：基准价扣分改为「每偏离 1% 扣 k 分」`max(0, full - k*deviation*100)`；有效报价 ≥4 家或显式配置时去一高一低；JSON null／「100万」／「1,000,000 元」可解析；未知方法提示按基准价；`--k<0`、最高限价 0 值边界校验；输出基准价口径（家数／含本家／是否去极值）。
+- **tender_credits.py**：顶层数组不再 `data.get` 崩溃；`need_auth` 不计入已满足，退出码严格按已授权可用数；文案保留「需补齐授权后方可满足」与「已授权缺 X 项（即使计入需授权项仍缺 Y 项）」，兼容既有 `test_tender` 的「缺 1 项」断言；支持「100万／万元」、两位年份归一 20xx、中文状态词；`--need` 正数校验。
+- **eval_cases.py**：`--answer` 的 contract／input 改为相对案例目录解析，答案放 /tmp 也能跑；空 checks 或缺反例不再算「有判别力」；单案例异常隔离、重复 `case_id` 检测、坏正则返回失败而非拖垮整批；lint 契约缺失、docgen 输入／模板错误给出可读失败。
+- **citation_lint.py**：`affirms_claim` 处理顿号另起肯定：「本案不是终审判决、已生效」判为肯定；「不可作为定稿、可交付件」仍判否定。元禁止词（不得／不可／禁止／严禁／切勿）后的顿号不触发放行。
+- 新增 `tests/test_tender_eval_bugs.py`：16 条探针覆盖上述核心修复；`/tmp/tsl-baseline` 修复前 0/16 全挂，当前 16/16 全过。
+- 回归：`eval_cases` 12/12、`test_citation_lint` 160/160、`test_lawdb` 9/9、`test_lawdiff` 5/5、`test_tender` 7/7、`test_lint_docgen_bugs` 11/11、`test_remaining_tools_bugs` 10/10、`test_tender_eval_bugs` 16/16。
+
 ## 2026-11-09（v2.39.27）补齐 10 项回归探针，锁死 build/lawdiff/test_tender 旧缺陷
 
 - 新增 `tests/test_remaining_tools_bugs.py`，把本轮修复的 10 处缺陷固化成探针：build 4 项（敏感文件入包、`--lite-extra`、README 断言数校验、`demote` 围栏与死变量）、lawdiff 4 项（同条号去重、`--only` 归一化、抽查最大条号、`HEAD_TAIL` 零／长章名）、test_tender 2 项（C6 退出码、临时目录清理与 UTF-8）。

@@ -22,6 +22,7 @@ import json
 import re
 import sys
 import zipfile
+from datetime import date
 from pathlib import Path
 
 # ---------------------------------------------------------------- 读文件
@@ -43,17 +44,39 @@ def docx_text(path: Path) -> str:
 
 
 def docx_meta(path: Path) -> dict:
+    out: dict[str, str] = {}
     with zipfile.ZipFile(path) as z:
-        try:
-            xml = z.read("docProps/core.xml").decode("utf-8", "ignore")
-        except KeyError:
-            return {}
-    out = {}
-    for key in ("creator", "lastModifiedBy", "title", "company"):
-        m = re.search(rf"<(?:[A-Za-z]+:)?{key}[^>]*>(.*?)</(?:[A-Za-z]+:)?{key}>", xml, re.S)
-        if m and m.group(1).strip():
-            out[key] = m.group(1).strip()
+        names = set(z.namelist())
+        xmls = []
+        for part in ("docProps/core.xml", "docProps/app.xml", "docProps/custom.xml"):
+            if part in names:
+                xmls.append(z.read(part).decode("utf-8", "ignore"))
+    for xml in xmls:
+        for key in ("creator", "lastModifiedBy", "title", "company", "manager"):
+            m = re.search(
+                rf"<(?:[A-Za-z]+:)?{key}\b[^>]*>(.*?)</(?:[A-Za-z]+:)?{key}>",
+                xml, re.S | re.I,
+            )
+            if m and re.sub(r"<[^>]+>", "", m.group(1)).strip():
+                out[key] = re.sub(r"<[^>]+>", "", m.group(1)).strip()
+        for m in re.finditer(
+            r"<property\b[^>]*\bname=\"([^\"]+)\"[^>]*>(.*?)</property>", xml, re.S | re.I
+        ):
+            name = m.group(1).strip()
+            value = re.sub(r"<[^>]+>", "", m.group(2)).strip()
+            if value and name in ("公司", "作者", "经理", "Creator", "Company", "Manager"):
+                out[name] = value
     return out
+
+
+def read_text_any(path: Path) -> str:
+    data = path.read_bytes()
+    for enc in ("utf-8", "gb18030"):
+        try:
+            return data.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return data.decode("utf-8", "ignore")
 
 
 def collect(paths: list[Path]) -> list[tuple[Path, str]]:
@@ -64,12 +87,21 @@ def collect(paths: list[Path]) -> list[tuple[Path, str]]:
                 q for q in p.rglob("*")
                 if q.suffix.lower() in TEXT_SUFFIX | DOCX_SUFFIX and q.is_file()
             )
-        elif p.suffix.lower() in TEXT_SUFFIX | DOCX_SUFFIX:
+        elif not p.exists():
+            print(f"跳过（文件不存在）：{p}", file=sys.stderr)
+        elif p.suffix.lower() in TEXT_SUFFIX | DOCX_SUFFIX and p.is_file():
             files.append(p)
         else:
             print(f"跳过（非文本）：{p}", file=sys.stderr)
-    return [(f, f.read_text("utf-8", "ignore") if f.suffix.lower() in TEXT_SUFFIX else docx_text(f))
-            for f in files]
+    pairs: list[tuple[Path, str]] = []
+    for f in files:
+        try:
+            text = read_text_any(f) if f.suffix.lower() in TEXT_SUFFIX else docx_text(f)
+        except (OSError, zipfile.BadZipFile) as exc:
+            print(f"跳过无法读取的文件：{f}（{exc}）", file=sys.stderr)
+            continue
+        pairs.append((f, text))
+    return pairs
 
 # ---------------------------------------------------------------- 金额
 
@@ -134,6 +166,15 @@ def label_near(text: str, pos: int, labels: list[str], window: int = 40) -> str 
 
 
 DATE_RE = re.compile(r"(20\d{2})\s*[年\-/.]\s*(\d{1,2})\s*[月\-/.]\s*(\d{1,2})\s*日?")
+CLAUSE_BREAK = re.compile(r"[，,。；;！!？?\n]")
+
+
+def clause_bounds(text: str, pos: int) -> tuple[int, int]:
+    start = 0
+    for m in CLAUSE_BREAK.finditer(text, 0, pos):
+        start = m.end()
+    m = CLAUSE_BREAK.search(text, pos)
+    return start, (m.start() if m else len(text))
 
 # ---------------------------------------------------------------- 检查
 
@@ -168,14 +209,16 @@ def check_file(path: Path, text: str, f: Findings, price_index: dict) -> None:
         value = cn_to_yuan(raw)
         if value is None or value == 0:
             continue
-        near = [v for (s, e, v) in num_spans if abs(s - m.start()) <= 30]
+        lo, hi = clause_bounds(text, m.start())
+        near = [(s, v) for (s, e, v) in num_spans if lo <= s < hi]
         line = line_of(text, m.start())
         if not near:
-            f.add("提示", "C1", f"大写金额「{raw}」附近无对应数字金额", f"{where_prefix}:{line}")
+            f.add("提示", "C1", f"大写金额「{raw}」同分句内无对应数字金额", f"{where_prefix}:{line}")
             continue
-        if all(abs(v - value) > 0.005 for v in near):
+        _, nearest = min(near, key=lambda sv: abs(sv[0] - m.start()))
+        if abs(nearest - value) > 0.005:
             f.add("错误", "C1",
-                  f"大写「{raw}」= {value:.2f}，附近数字为 {near[0]:.2f}",
+                  f"大写「{raw}」= {value:.2f}，同分句最近数字为 {nearest:.2f}",
                   f"{where_prefix}:{line}")
     # 2) 同一价格标签多值
     by_label: dict[str, list[tuple[float, int]]] = {}
@@ -197,9 +240,14 @@ def check_file(path: Path, text: str, f: Findings, price_index: dict) -> None:
         lab = label_near(text, m.start(), DATE_LABELS)
         if not lab:
             continue
-        y, mo, d = m.groups()
-        dates.setdefault(lab, []).append((f"{int(y)}-{int(mo):02d}-{int(d):02d}",
-                                          line_of(text, m.start())))
+        y, mo, d = (int(x) for x in m.groups())
+        try:
+            day = date(y, mo, d).isoformat()
+        except ValueError:
+            f.add("提示", "C3", f"日期不存在：{y}-{mo:02d}-{d:02d}",
+                  f"{where_prefix}:{line_of(text, m.start())}")
+            continue
+        dates.setdefault(lab, []).append((day, line_of(text, m.start())))
     for lab, vals in dates.items():
         distinct = {v for v, _ in vals}
         if len(distinct) > 1:
@@ -209,6 +257,7 @@ def check_file(path: Path, text: str, f: Findings, price_index: dict) -> None:
 
 TOTAL_LABELS = ("合计", "总计", "总价", "合计金额", "总金额")
 SUBTOTAL_LABELS = ("小计",)
+AMOUNT_HEADER_KW = ("金额", "价格", "报价", "合计", "总价", "费用", "价款", "元")
 NUM_CELL = re.compile(r"^[¥￥]?\s*([0-9][0-9,，]*(?:\.[0-9]{1,2})?)\s*(万元|万|元)?$")
 
 
@@ -231,24 +280,35 @@ def check_table_totals(path: Path, text: str, f: Findings) -> None:
             numeric = [i for i in range(max(len(r) for r in rows))
                        if sum(1 for r in rows if i < len(r) and parse_money_cell(r[i]) is not None) >= 2]
             if numeric:
-                col = numeric[-1]
-                items, totals = [], []
-                for r in rows:
-                    if col >= len(r) or parse_money_cell(r[col]) is None:
-                        continue
-                    label = r[0]
-                    value = parse_money_cell(r[col])
-                    if any(k in label for k in TOTAL_LABELS):
-                        totals.append((label, value))
-                    elif not any(k in label for k in SUBTOTAL_LABELS):
-                        items.append((label, value))
-                if items and totals:
-                    total_label, total_value = totals[-1]
-                    s = sum(v for _, v in items)
+                header = rows[0]
+                amount_cols = [i for i in numeric
+                               if i < len(header) and any(k in header[i] for k in AMOUNT_HEADER_KW)]
+                col = amount_cols[-1] if amount_cols else numeric[-1]
+                section: list[tuple[str, float]] = []
+
+                def compare(label: str, total_value: float, kind: str) -> None:
+                    if not section:
+                        return
+                    s = sum(v for _, v in section)
                     if abs(s - total_value) > 0.01:
                         f.add("错误", "C6",
-                              f"「{total_label}」{total_value:.2f} 与分项之和 {s:.2f} 不符（差 {total_value - s:+.2f}）",
+                              f"「{label}」{total_value:.2f}（{kind}）与分项之和 {s:.2f} 不符"
+                              f"（差 {total_value - s:+.2f}）",
                               f"{path.name}:{start_line}")
+
+                for r in rows[1:]:
+                    if col >= len(r) or parse_money_cell(r[col]) is None:
+                        continue
+                    label = " ".join(c for c in r[:2] if c)
+                    value = parse_money_cell(r[col])
+                    assert value is not None
+                    is_sub = any(any(k in c for k in SUBTOTAL_LABELS) for c in r[:2])
+                    is_total = any(any(k in c for k in TOTAL_LABELS) for c in r[:2])
+                    if is_sub or is_total:
+                        compare(label, value, "小计" if is_sub and not is_total else "合计")
+                        section = []
+                    else:
+                        section.append((label, value))
         block, start_line = [], 0
 
     for lineno, line in enumerate(text.splitlines(), 1):
@@ -269,7 +329,8 @@ def check_meta(path: Path, f: Findings, anonymous: bool) -> None:
     meta = docx_meta(path)
     if not meta:
         return
-    risky = {k: v for k, v in meta.items() if k in ("creator", "lastModifiedBy", "company")}
+    risky = {k: v for k, v in meta.items()
+             if k in ("creator", "lastModifiedBy", "company", "manager", "公司", "作者", "经理")}
     if not risky:
         return
     detail = "，".join(f"{k}={v}" for k, v in risky.items())
@@ -299,12 +360,14 @@ def main(argv: list[str]) -> int:
             check_meta(path, f, args.anonymous)
 
     # 4) 同一价格标签跨文件不一致（多包号项目请自行排除）
+    SOFT_PRICE_LABELS = ("最高限价", "预算金额", "采购预算", "投标保证金", "保证金金额")
     for lab, vals in price_index.items():
         if lab in ("大写", "小写", "小计"):
             continue
         if len({v for v, _, _ in vals}) > 1 and len({p for _, p, _ in vals}) > 1:
             detail = "，".join(f"{v:.2f}（{p}:{l}）" for v, p, l in vals[:5])
-            f.add("错误", "C5", f"「{lab}」跨文件金额不同：{detail}（不同包号可忽略）", "多文件")
+            level = "提示" if lab in SOFT_PRICE_LABELS else "错误"
+            f.add(level, "C5", f"「{lab}」跨文件金额不同：{detail}（不同包号可自行核对）", "多文件")
 
     if args.json:
         print(json.dumps({"files": [str(p) for p, _ in pairs], "findings": f.items,

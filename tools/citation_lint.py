@@ -67,6 +67,10 @@ def _is_future(day: str) -> bool:
 
 NEG_MARKERS = re.compile(r"(不|非|无|未|勿|别|没有|并非|不是|不得|不能|不可|尚未|禁止|严禁)")
 CLAUSE_BREAK = re.compile(r"[，,。；;！!？?\n]")
+# 顿号不切分句：否定通常仍管到顿号后的并列项（「不可作为定稿、可交付件」）。
+# 只有「不是终审判决、已生效」这类“前项否定 + 后项另起肯定”才让否定失效。
+AFFIRM_AFTER_DUN = re.compile(r"^\s*(?:已|已经|确已|均已|现已|系|属于|实为|确属|肯定|必然)")
+META_PROHIBIT = re.compile(r"不得|不可|禁止|严禁|切勿")
 
 
 def affirms_claim(text: str, word: str) -> bool:
@@ -74,13 +78,23 @@ def affirms_claim(text: str, word: str) -> bool:
 
     否定只在**同一分句内**算数：「本稿不是可交付稿」「无一条已核实」不算声称，
     但「本稿未经回读，已核实」是在肯定第二分句，仍算声称。故先按逗号、句号、
-    分号、顿号、换行切出所在分句，只看分句内 word 之前的部分有没有否定词。
+    分号、换行切出所在分句，只看分句内 word 之前的部分有没有否定词。
+
+    顿号不直接切分句，但允许「本案不是终审判决、已生效」这种另起肯定：
+    若 word 前有顿号，且最后一个顿号后的内容（含 word）以肯定副词/系动词
+    开头，同时顿号前的否定不是“不得/不可/禁止/严禁/切勿”这类元禁止词，
+    则认为前序否定只否定前项，word 仍是肯定声称。
     """
     for m in re.finditer(re.escape(word), text):
         start = 0
         for b in CLAUSE_BREAK.finditer(text, 0, m.start()):
             start = b.end()
         before = text[start:m.start()]
+        dun = before.rfind("、")
+        if dun >= 0:
+            head, tail = before[:dun], before[dun + 1 :]
+            if AFFIRM_AFTER_DUN.match(tail + word) and not META_PROHIBIT.search(head):
+                return True
         if NEG_MARKERS.search(before):
             continue
         return True

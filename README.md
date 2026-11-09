@@ -357,6 +357,7 @@ python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5
 python3 tests/test_remaining_tools_bugs.py  # 构建/比对/投标 10 项回归探针，10/10
+python3 tests/test_tender_eval_bugs.py      # 投标四件套/eval 16 项回归探针，16/16
 python3 tools/retrieval_check.py      # 卡片检索回归，8/8
 python3 tools/eval_cases.py           # 基准集判别力，12/12（金标过、反例拦）
 python3 tools/card_health.py          # 条号错位、跨卡矛盾、占位值、cause↔tags 一致性
