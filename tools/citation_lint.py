@@ -65,8 +65,8 @@ def _is_future(day: str) -> bool:
         return False
 
 
-NEG_MARKERS = re.compile(r"(不|非|无|未|勿|别|没有|并非|不是|不得|不能|不可|尚未)")
-CLAUSE_BREAK = re.compile(r"[，,。；;、！!？?\n]")
+NEG_MARKERS = re.compile(r"(不|非|无|未|勿|别|没有|并非|不是|不得|不能|不可|尚未|禁止|严禁)")
+CLAUSE_BREAK = re.compile(r"[，,。；;！!？?\n]")
 
 
 def affirms_claim(text: str, word: str) -> bool:
@@ -164,8 +164,8 @@ OFFICIAL_SITES: list[tuple[str, str | None]] = [
     ("bjcourt.gov.cn", None),
     ("spp.gov.cn", None),
 ]
-URL_RE = re.compile(r"https?://[^\s，。；、）)\]】>\"']+")
-HOST_RE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:cn|com|net|org|gov|edu|io|hk|tw|info)")
+URL_RE = re.compile(r"https?://[^\s，。；、）)\]】>\"']+", re.I)
+HOST_RE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:cn|com|net|org|gov|edu|io|hk|tw|info)", re.I)
 
 
 def sites_in(text: str) -> list[tuple[str, str | None]]:
@@ -178,7 +178,7 @@ def sites_in(text: str) -> list[tuple[str, str | None]]:
         if not mh:
             continue
         host = mh.group(0).lower()
-        tail = url[mh.end():]
+        tail = re.sub(r"^:\d+", "", url[mh.end():])
         path = tail.split("?")[0].split("#")[0] if tail else ""
         out.append((host, path or "/"))
     rest = URL_RE.sub(" ", rest)
@@ -303,14 +303,22 @@ DATE_RE = re.compile(r"\d{4}\s*[-/年]\s*\d{1,2}\s*[-/月]\s*\d{1,2}\s*日?|\d{4
 CASE_NO_RE = re.compile(r"[（(]\s*(?:19|20)\d{2}\s*[）)][^\s，。；：、（）()]{2,32}?号")
 GUIDE_NO_RE = re.compile(r"指导案例\s*\d+\s*号|入库编号\s*[\w\-]{4,}")
 REREAD_RE = re.compile(r"已回读[（(](\d{4}-\d{2}-\d{2}|日期待补)[）)]")
-TAG_RE = re.compile(r"[\[〔【]\s*([NCM]-\d{1,3})\s*[\]〕】]|(?<![\w\-])([NCM]-\d{1,3})(?![\w\-])")
+TAG_RE = re.compile(r"[\[〔【]\s*([NCSM]-\d{1,3})\s*[\]〕】]|(?<![\w\-])([NCSM]-\d{1,3})(?![\w\-])")
+
+
+def norm_id(raw: str) -> str:
+    """编号归一：〔N-1〕／N-1／N-01 统一成 N-01，避免同一编号三种写法互相认不出。"""
+    m = re.match(r"^[〔\[【（(]?\s*([NCSM])\s*-\s*(\d{1,3})\s*[〕\]】）)]?$", str(raw or "").strip())
+    if m:
+        return f"{m.group(1)}-{int(m.group(2)):02d}"
+    return str(raw or "").strip()
 
 
 def find_tags(line: str) -> list[str]:
     """取出引用标签：〔N-01〕与裸写 N-01 两种写法都认。"""
     out = []
     for m in TAG_RE.finditer(line):
-        out.append(m.group(1) or m.group(2))
+        out.append(norm_id(m.group(1) or m.group(2)))
     return out
 PLACEHOLDER_RE = re.compile(r"[（(]\s*(?:[XxｘＸ]{2,}|20[XxｘＸ]{2}|\d{2}[XxｘＸ]{2})\s*[）)][^\n]{0,30}?号")
 TODO_SECTION_RE = re.compile(r"待取|线索|待补|待核")
@@ -364,7 +372,7 @@ def parse_tables(lines: list[str]) -> list[dict]:
             for ln, cells in block[1:]
             if not all(set(c) <= set("-: ") for c in cells)
         ]
-        tables.append({"heading": heading, "header": header, "rows": rows})
+        tables.append({"heading": heading, "header": header, "rows": rows, "lines": {ln for ln, _ in block}})
     return tables
 
 
@@ -376,8 +384,8 @@ def cell_at(cells: list[str], idx: int | None) -> str:
 
 # 首页计数声明：写成散文，不写成表格；数字必须能和表行数对上
 TOTAL_RES = [
-    re.compile(r"(?:共|合计|总计)\s*(\d+)\s*项(?:问题|风险|缺陷)"),
-    re.compile(r"(\d+)\s*项(?:问题|风险点|缺陷)"),
+    re.compile(r"(?:共|合计|总计|发现|识别|检出|存在)\s*(\d+)\s*项(?:问题|风险点?|缺陷)"),
+    re.compile(r"(?<![其中另有含])(?<!其中\s)(?<!另有\s)(?<!含\s)(\d+)\s*项(?:问题|风险点|缺陷)(?!\s*(?:属|为|系)\s*(?:高|中|低)风险)"),
 ]
 MUST_RES = [
     re.compile(r"必改\s*(\d+)\s*项"),
@@ -462,7 +470,7 @@ def check_review_counts(rep: "Report", lines: list[str], tables: list[dict], mod
         levels.setdefault(m.group(2), int(m.group(1)))
     for m in LEVEL_RES[1].finditer(head):  # 「高风险 5 项」
         levels.setdefault(m.group(1), int(m.group(2)))
-    if not total and not must and not levels and cond_declared is None and determinate_declared is None:
+    if total is None and must is None and not levels and cond_declared is None and determinate_declared is None:
         rep.warn(
             "R19",
             "有风险表，但首页没解析到问题总数／必改数／分级数，无法核对（建议写成「共 N 项问题，其中高风险 a 项……必改 b 项」）",
@@ -558,7 +566,6 @@ def load_ledger_md(path: Path) -> list[dict]:
         ident = next((v for k, v in row.items() if "编号" in k and v), None)
         if not ident:
             continue
-        joined = " ".join(row.keys())
         id_key = next((k for k in row if "编号" in k), "")
 
         def get(*keys, skip_id: bool = False) -> str:
@@ -571,18 +578,22 @@ def load_ledger_md(path: Path) -> list[dict]:
 
         entries.append(
             {
-                "id": ident,
+                "id": norm_id(ident),
                 "type": get("类型", "类别"),
                 "number": get("案号", "文号", skip_id=True) or get("编号", skip_id=True),
                 "name": get("名称", "案名", "全称"),
                 "court": get("法院", "机关"),
                 "date": get("裁判日期", "日期", "施行"),
-                "channel": pick([("官方", "official"), ("商业", "commercial"), ("导出", "user_export"), ("口述", "oral")], joined + " " + get("来源渠道", "来源"), "unknown"),
-                "location": get("定位", "页码", "出处", "页段"),
+                # 渠道只看单元格内容：表头列名里有「官方复核」就会带「官方」二字，
+                # 拼进去会让任何渠道都被 pick() 判成 official
+                "channel": pick([("官方", "official"), ("商业", "commercial"), ("导出", "user_export"), ("口述", "oral")], get("来源渠道", "来源", "渠道"), "unknown"),
+                # 「定位」与「出处／链接」分列时，两个字段都要读，否则官方 URL 会被丢掉
+                "location": get("定位", "页码", "页段", "条款") or get("出处", "链接", "网址", "URL", "url"),
+                "source": get("出处", "链接", "网址", "URL", "url"),
                 "read_scope": pick(SCOPE_WORDS, get("读取范围", "范围"), "unknown"),
                 "quote": get("摘录", "原文"),
                 "reread": get("回读"),
-                "official_check": pick(CHECK_WORDS, get("官方复核", "复核"), "unknown"),
+                "official_check": get("官方复核", "复核") or "unknown",
                 "effectiveness": pick(EFFECT_WORDS, get("生效", "后续"), "unknown"),
                 "norm_status": normalize_norm_status(get("规范效力")),
                 "apply_time": get("适用时点"),
@@ -820,8 +831,15 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
     rep = Report()
     text = body_path.read_text(encoding="utf-8")
     lines = text.splitlines()
-    doc_norm = norm_quote(text)
     tables = parse_tables(lines)
+    # 文末「引用底稿」表是条目的**定义**，不是正文：既不参与逐行扫描，也不进 doc_norm。
+    # 否则表内的「摘要／标题」行会误触 R3、表内编号会被当成正文引用从而漏报 R10，
+    # 摘录只写在底稿表里又会让 R12 的「全文找不到摘录」永远成立而降级。
+    ledger_tables = [t for t in tables if LEDGER_HEADING_RE.search(t["heading"])] or [
+        t for t in tables if is_ledger_table(t)
+    ]
+    ledger_line_nos = {ln for t in ledger_tables for ln in t.get("lines", set())}
+    doc_norm = norm_quote("\n".join(l for i, l in enumerate(lines, start=1) if i not in ledger_line_nos))
     contract_text = contract_path.read_text(encoding="utf-8") if contract_path else ""
 
     ledger = load_ledger(ledger_path) if ledger_path else []
@@ -829,6 +847,9 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
         ledger = load_ledger_inline(body_path)
         if ledger:
             rep.warn("R0", f"未指定 --ledger，已从文书内表格读到底稿 {len(ledger)} 条（字段不全，只做编号与摘录检查）")
+    for e in ledger:
+        if e.get("id"):
+            e["id"] = norm_id(e["id"])
     by_id = {e["id"]: e for e in ledger if e.get("id")}
     known_numbers = {norm(e["number"]) for e in ledger if e.get("number")}
     out_of_vocab: list[str] = []
@@ -851,6 +872,8 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
     for idx, line in enumerate(lines, start=1):
         if line.lstrip().startswith("#"):
             heading = line.strip()
+        if idx in ledger_line_nos:
+            continue
         in_todo = bool(TODO_SECTION_RE.search(heading))
 
         # R1 正文案号必须登记（待取正文小节允许只作线索）
@@ -898,8 +921,13 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
                 elif any(b in quote for b in BOILERPLATE_QUOTES) and len(q) < 16:
                     rep.error("R13", f"[{tag}] 的摘录是套话（{quote}），任何判决都有，无法证伪")
 
-                # R12 摘录应出现在引用处附近
-                window = norm_quote("\n".join(lines[max(0, idx - 3): idx + 2]))
+                # R12 摘录应出现在引用处附近（底稿表行不算「附近」，免得引用贴底稿表时误过）
+                near_lines = [
+                    lines[j]
+                    for j in range(max(0, idx - 3), min(len(lines), idx + 2))
+                    if (j + 1) not in ledger_line_nos
+                ]
+                window = norm_quote("\n".join(near_lines))
                 if q not in window:
                     if q in doc_norm:
                         rep.warn("R12", f"第 {idx} 行引用的摘录不在该处附近，请确认摘录与结论是同一段")
@@ -953,11 +981,14 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
     # R21 风险表里的法律结论必须挂底稿编号（启发式，只警告）
     check_conclusion_sources(rep, tables)
 
-    # R9 复核表述与模式
-    claims_review = re.search(r"已复核|经复核|独立核验|已通过独立审查", text)
-    if claims_review and mode != "review":
-        rep.error("R9", f"当前为自查模式，但正文出现「{claims_review.group(0)}」；改为「已完成自查」或改用独立复核")
-    if mode == "self" and "〔自查〕" not in text and claims_review:
+    # R9 复核表述与模式：必须区分「已复核」与「未经复核」，后者是否定句，不算声称
+    claimed_review = next(
+        (w for w in ("已复核", "经复核", "独立核验", "已通过独立审查") if affirms_claim(text, w)),
+        None,
+    )
+    if claimed_review and mode != "review":
+        rep.error("R9", f"当前为自查模式，但正文出现「{claimed_review}」；改为「已完成自查」或改用独立复核")
+    if mode == "self" and "〔自查〕" not in text and claimed_review:
         rep.warn("R9", "自查模式建议在标题后标注〔自查〕")
 
     # R10 底稿条目未被引用

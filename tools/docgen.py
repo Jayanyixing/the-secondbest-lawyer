@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -29,15 +30,24 @@ FONT_BODY = "仿宋"
 FONT_HEAD = "黑体"
 
 
+# XML 1.0 不允许的控制字符（\x09 \x0a \x0d 保留）。PDF／OCR 提取的文本常带 \x0c 换页符，
+# 直接写进 word/document.xml 会让 Word 报「内容有问题，无法打开文件」。
+CTRL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
 def esc(text: str) -> str:
-    return escape(str(text or ""))
+    return escape(CTRL_CHARS_RE.sub("", str(text or "")))
 
 
 def run(text: str, font: str = FONT_BODY, size: int = 28, bold: bool = False) -> str:
     b = "<w:b/>" if bold else ""
+    # <w:t> 里的裸 \n 在 Word 里只会显示成空格；真正的换行要用 <w:br/>
+    raw = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
+    parts = [f'<w:t xml:space="preserve">{esc(seg)}</w:t>' for seg in raw.split("\n")]
+    body = "<w:br/>".join(parts)
     return (
         f'<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:eastAsia="{font}" w:hAnsi="Times New Roman"/>'
-        f'{b}<w:sz w:val="{size}"/></w:rPr><w:t xml:space="preserve">{esc(text)}</w:t></w:r>'
+        f'{b}<w:sz w:val="{size}"/></w:rPr>{body}</w:r>'
     )
 
 
@@ -45,9 +55,11 @@ def para(text: str = "", align: str = "both", font: str = FONT_BODY, size: int =
          bold: bool = False, indent: bool = True, space_after: int = 120) -> str:
     ind = '<w:ind w:firstLineChars="200" w:firstLine="560"/>' if indent and align == "both" else ""
     jc = f'<w:jc w:val="{align}"/>' if align else ""
+    # ECMA-376 的 CT_PPrBase 是严格 sequence：spacing → ind → jc。顺序反了，
+    # Word／LibreOffice／OpenXML SDK 会静默丢掉排在 jc 之后的 ind 与 spacing
     return (
-        f"<w:p><w:pPr>{jc}{ind}<w:spacing w:after=\"{space_after}\" w:line=\"560\" w:lineRule=\"exact\"/>"
-        f"</w:pPr>{run(text, font, size, bold)}</w:p>"
+        f"<w:p><w:pPr><w:spacing w:after=\"{space_after}\" w:line=\"560\" w:lineRule=\"exact\"/>"
+        f"{ind}{jc}</w:pPr>{run(text, font, size, bold)}</w:p>"
     )
 
 
@@ -242,7 +254,7 @@ def main(argv: list[str]) -> int:
     blocks = TEMPLATES[args.template](data)
     out = Path(args.out)
     build_docx(blocks, out)
-    leftovers = sum(1 for blk in blocks if "【待补" in blk)
+    leftovers = sum(blk.count("【待补") for blk in blocks)
     print(f"已生成 {out}（{out.stat().st_size:,} 字节）")
     if leftovers:
         print(f"提示：仍有 {leftovers} 处【待补】占位符，交付前必须替换")
