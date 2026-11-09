@@ -10,3 +10,4 @@ reports/
 data/credits.json
 eval/sealed/
 eval/batch2/sealed/
+.workbuddy/

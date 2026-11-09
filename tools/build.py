@@ -184,6 +184,9 @@ def build_zip(out: Path) -> Path:
             for path in sorted(base.rglob("*")):
                 if path.is_dir() or "__pycache__" in path.parts or path.suffix == ".pyc":
                     continue
+                # 隐藏目录（.workbuddy、.git 等）是本地工作数据，不进分发包
+                if any(part.startswith(".") for part in path.relative_to(base).parts):
+                    continue
                 zf.write(path, path.relative_to(ROOT).as_posix())
         for name in include_files:
             path = ROOT / name
