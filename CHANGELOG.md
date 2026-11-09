@@ -1,5 +1,10 @@
 # 变更记录
 
+## 2026-11-09（v2.38.7）否定判定限定在同一分句
+
+- `affirms_claim()` 原按「word 前 8 个字」找否定词，窗口会跨过分句边界：`本稿未经回读，已核实` 里第二分句的肯定被第一分句的「未」吞掉。改为先按 `，,。；;、！？换行` 切出所在分句，只在分句内判定。
+- 新增 `tests/fixtures/offline-draft-contrast.md`：`本稿未经联网回读，但引用均已核实，可以直接使用` → R17；`offline-draft-negative.md`（`不是可交付稿`／`无一条已核实`）仍通过。
+
 ## 2026-11-09（v2.38.6）严格模式补 fixture
 
 - 新增 `tests/fixtures/strict-missing-effect.md/.json`：用于结论、但底稿没有「规范效力」栏。

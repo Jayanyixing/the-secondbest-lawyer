@@ -175,6 +175,13 @@ def main() -> int:
     code, out = run_ledger_strict(body, old)
     _chk(code == 1 and "严格模式" in out, f"严格模式缺效力却用于结论应报错，实际 {code}", fails)
 
+    # R17 否定只在同一分句内生效
+    code, out = run_file(d / "offline-draft-negative.md", "--mode", "offline")
+    _chk(code == 0, f"「不是可交付稿」「无一条已核实」应通过，实际 {code}", fails)
+    code, out = run_file(d / "offline-draft-contrast.md", "--mode", "offline")
+    _chk(code == 1 and "[R17]" in out, f"「未经联网回读，但引用均已核实」应报 R17，实际 {code}", fails)
+    _chk("已核实" in out, "R17 未指出被肯定的「已核实」", fails)
+
     # 严格模式 fixture：普通模式通过（仅警告），--strict 报 R16 错误
     code, out = run_fixture("strict-missing-effect.md", "strict-missing-effect.json")
     _chk(code == 0, f"普通模式缺规范效力应通过，实际 {code}", fails)
