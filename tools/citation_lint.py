@@ -475,17 +475,17 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         else:
             seen[q] = entry["id"]
 
-    # 离线模式：必须是草稿，首页要声明，文末要待回读清单
+    # R17 离线草稿形态：必须是草稿，首页要声明，文末要待回读清单
     if mode == "offline":
         if "〔草稿〕" not in text:
-            rep.error("R15", "离线模式要求标题带〔草稿〕：离线稿是草稿，不可作为定稿")
+            rep.error("R17", "离线模式要求标题带〔草稿〕：离线稿是草稿，不可作为定稿")
         if "未经联网回读" not in text:
-            rep.error("R15", "离线模式要求首页写明「本稿未经联网回读……回读率 0%」")
+            rep.error("R17", "离线模式要求首页写明「本稿未经联网回读……回读率 0%」")
         if not re.search(r"待回读清单|待回读条目", text):
-            rep.error("R15", "离线模式要求文末给「待回读清单」（条目编号＋建议核对的官方来源）")
+            rep.error("R17", "离线模式要求文末给「待回读清单」（条目编号＋建议核对的官方来源）")
         for word in ("可交付", "可直接使用", "已核实", "已核（与官方原文一致）"):
             if affirms_claim(text, word):
-                rep.error("R15", f"离线稿不得出现「{word}」：离线只能出草稿")
+                rep.error("R17", f"离线稿不得出现「{word}」：离线只能出草稿")
 
     return rep
 

@@ -86,7 +86,7 @@ the-secondbest-lawyer/
 templates/                       文书 JSON 样例、取卡模板与批次、弃卡清单、检索验收题
 tools/
 ├── lawdb.py                     法条库＋结案卡片：导入／检索／按条取文／哈希校验／card-*
-├── citation_lint.py             引用校验器（16 条规则）
+├── citation_lint.py             引用校验器（18 条规则）
 ├── card_health.py               条号错位、跨卡矛盾、占位值、cause↔tags 一致性
 ├── feedback.py / improve.py     失败信号记录与改进提案（只提不改库）
 ├── retrieval_check.py           检索验收回归（data/retrieval-cases.json）
@@ -144,6 +144,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 | R13 | 摘录过短或全是套话，无法证伪 |
 | R14 | 同一摘录被不同条目复用 |
 | R15 | 用于结论的条目未回读 |
+| R17 | 离线稿形态不合规：缺〔草稿〕／缺「未经联网回读」声明／缺待回读清单／肯定地声称可交付（错误） |
 | R18 | 来源渠道与官方复核矛盾：商业库／转载件却记「已核」（错误） |
 | R16 | 规范类条目缺「规范效力」或「适用时点」（警告）；规范效力「未确认」却用于结论（错误）——两条独立判定，缺字段不屏蔽错误 |
 
