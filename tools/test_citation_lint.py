@@ -377,6 +377,10 @@ def main() -> int:
     _chk(code == 0, f"source_url 底稿应通过，实际 {code}：{out[:120]}", fails)
     _chk("[R18]" not in out and "[R2]" not in out, "source_url 被当成「无官方链接」误报", fails)
 
+    # R19：真实报告写法「（含 2 项条件式），低风险 3 项」不得被读成条件式 3 项
+    code, out = run_fixture("homepage-conditional-wording.md")
+    _chk(code == 0 and "[R19]" not in out, f"条件式计数的插入语被误读，实际 {code}：{out[:160]}", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

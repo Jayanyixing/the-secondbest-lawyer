@@ -50,3 +50,4 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `inline-ledger-dedup.md` | 无 | 0（警告） | R0 | 同一编号在风险表被引用 3 次、底稿表 1 条：只算 2 条（N-01、N-02） |
 | `trial-blind-review.md` | 无 | 1 | R19 ×3（另 R20／R21 为警告） | 一次试跑的写法合集：首页手填数字、替换条款引用不存在的 7.3、结论无编号、条件式风险 |
 | `source-url-official.md/.json` | `--ledger …` | 0 | — | 出处写在 `source_url` 字段，R18 应认得，不得报「渠道官方却无链接」 |
+| `homepage-conditional-wording.md` | 无 | 0 | — | 首页「中风险 2 项（含 2 项条件式）」＋「条件式（待补材料）2 项」，不得把后面的「低风险 3 项」读成条件式数 |

@@ -325,7 +325,7 @@ python3 tools/eval_score.py eval/scores.csv
 ## 自检：改完先跑一遍
 
 ```bash
-python3 tools/test_citation_lint.py   # 引用校验器回归，156/156 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
+python3 tools/test_citation_lint.py   # 引用校验器回归，157/157 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5
