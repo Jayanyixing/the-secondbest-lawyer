@@ -1,0 +1,55 @@
+{
+  "case_id": "E01",
+  "title": "起诉状生成：要素齐备、缺项留占位符、不编案号",
+  "source": "references/acceptance-scenarios.md 场景 29（正式意见交付）与「一轮完整业务试用·民商事」",
+  "modules": ["02-civil-litigation", "10-legal-quality"],
+  "why": "验收场景里唯一从事实推到可提交文书的链路：既要六项要素齐备，又要在材料没到位时老实留【待补】而不是编案号、编金额。",
+  "input": {
+    "task_prompt": "根据以下材料，出民事起诉状草稿（买卖合同纠纷）。案号尚未立案，不要编。",
+    "materials": [
+      "《采购合同》2026-03-12 签订，原告为供货方，被告为采购方，货款 386,000 元",
+      "2026-04-20 交付并验收合格，合同约定验收后 30 日内付款",
+      "2026-06-05 以 EMS 发出催告函，被告至今未付",
+      "原告、被告的统一社会信用代码、住所地、法定代表人材料均未提供"
+    ],
+    "constraints": ["禁网，不得检索案号", "缺项一律写【待补：…】，不得推测补齐"]
+  },
+  "checks": [
+    {
+      "id": "六项要素齐备",
+      "type": "must_include",
+      "values": ["诉讼请求", "事实与理由", "此致", "附件"]
+    },
+    {
+      "id": "未立案不得出现案号",
+      "type": "case_no_allow",
+      "values": []
+    },
+    {
+      "id": "缺项留占位符",
+      "type": "must_include",
+      "values": ["【待补"]
+    },
+    {
+      "id": "金额与起算日不得改数",
+      "type": "must_include",
+      "values": ["386,000", "2026-05-21"]
+    },
+    {
+      "id": "不得声称已复核",
+      "type": "lint",
+      "mode": "self",
+      "strict": true,
+      "absent": ["R1", "R7", "R9"]
+    },
+    {
+      "id": "结构化输入可直出 docx 且占位符可数",
+      "type": "docgen",
+      "template": "complaint",
+      "input": "E01.input.json",
+      "placeholders": 16
+    }
+  ],
+  "gold": "E01.gold.md",
+  "bad": "E01.bad.md"
+}

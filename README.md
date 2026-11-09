@@ -98,13 +98,14 @@ tools/
 ├── docgen.py                    直出 docx（起诉状／证据目录／风险告知书，零依赖）
 ├── build.py                     生成单文件版与技能包
 ├── eval_score.py                评测分数汇总
+├── eval_cases.py                基准集跑分（eval/cases，金标＋反例判别力自检）
 ├── review_due.py                复查到期检查
 ├── tender_matrix.py             采购文件 → 响应矩阵
 ├── tender_consistency.py        标书形式一致性（C1–C6）
 ├── tender_score.py              评分测算与降价边际
 ├── tender_credits.py            业绩匹配与缺口
 └── test_tender.py               投标工具回归测试（7 项断言）
-eval/                            评测模板：case-card / scoring CSV
+eval/                            评测：盲评样本与打分表、cases/ 机器可判定的基准集
 dist/                            构建产物（单文件 lite/full + zip）
 ```
 
@@ -322,6 +323,26 @@ python3 tools/eval_score.py eval/scores.csv
 
 第一批暴露的真缺陷（C02 把劳动人事整块判为范围外、C04 漏竞业限制范围主线、C10 误判误工费）已修，见 `CHANGELOG.md` v2.36.2。
 
+### 机器可判定的基准集（不需要人打分）
+
+盲评跑一轮要人读人评，守不住「改完悄悄退回去」。`eval/cases/` 里另有 6 个合成场景，输入固定、断言固定，一条命令跑完：
+
+```bash
+python3 tools/eval_cases.py            # 金标全过 + 反例被拦，输出判别力 n/6
+python3 tools/eval_cases.py --case E03 --answer 某份产出.md   # 判一份真实产出
+```
+
+| 编号 | 场景 | 主要断言 |
+|---|---|---|
+| E01 | 起诉状生成 | 要素齐备、缺项留【待补】、不编案号、可直出 docx |
+| E02 | 合同审改 | 首页计数由表得出（R19）、替换条款条号真实存在（R20） |
+| E03 | 离线草稿 | 不声称已核、标〔草稿〕、留待回读清单（R17／R9） |
+| E04 | 范围外拦截 | 写边界＋给最小辅助，不出分割方案与胜诉承诺 |
+| E05 | 引用压力测试 | 不存在／仅标题／有全文三档分流，不编裁判理由 |
+| E06 | 期限内计算 | 上诉期最后一日算对并带状态标签（R5） |
+
+每个案例都配一份金标和一份反例：**金标全过、反例被拦**才算有判别力（当前 6/6）。只跑金标会自欺——断言写成「包含『意见』」也能过。输入全部按 `references/acceptance-scenarios.md` 合成，不用真实交付物；条文取自本地法条库，案例卡取自已脱敏的 `data/cards.sqlite`。细则见 [`eval/cases/README.md`](eval/cases/README.md)。
+
 ## 自检：改完先跑一遍
 
 ```bash
@@ -330,6 +351,7 @@ python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5
 python3 tools/retrieval_check.py      # 卡片检索回归，8/8
+python3 tools/eval_cases.py           # 基准集判别力，6/6（金标过、反例拦）
 python3 tools/card_health.py          # 条号错位、跨卡矛盾、占位值、cause↔tags 一致性
 python3 tools/lawdb.py verify         # 法条文件哈希，84/84
 ```

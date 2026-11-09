@@ -1,0 +1,39 @@
+{
+  "case_id": "E02",
+  "title": "合同审改：首页计数与表一致、替换条款必须可落地",
+  "source": "references/acceptance-scenarios.md 场景 36、37（首页数字由表计数得出／替换条款不得引用不存在的条号）",
+  "modules": ["05-contract-counsel", "10-legal-quality"],
+  "why": "合同审查最常见两种翻车：首页数字手填、与表对不上；替换条款写「见第 7.3 条」而合同里没有 7.3。两者都能被机器判死，适合做基准。",
+  "input": {
+    "task_prompt": "站在卖方立场审查这份设备采购合同，出审查意见：风险表、必改清单、可替换条款文字。",
+    "materials": ["E02.contract.md（脱敏合同，8 条条款）"],
+    "constraints": ["禁网", "替换条款必须给出可直接粘贴的文字，不能只写原则"]
+  },
+  "checks": [
+    {
+      "id": "首页总数由表计数得出",
+      "type": "must_include",
+      "values": ["共 13 项问题", "必改 6 项"]
+    },
+    {
+      "id": "不得手填错误总数",
+      "type": "must_not_include",
+      "values": ["共 14 项", "必改 7 项"]
+    },
+    {
+      "id": "替换条款给出可粘贴文字",
+      "type": "must_include",
+      "values": ["替换第2\\.1条"]
+    },
+    {
+      "id": "计数与条款引用均无 lint 告警",
+      "type": "lint",
+      "mode": "self",
+      "strict": true,
+      "contract": "E02.contract.md",
+      "absent": ["R19", "R20", "R9"]
+    }
+  ],
+  "gold": "E02.gold.md",
+  "bad": "E02.bad.md"
+}

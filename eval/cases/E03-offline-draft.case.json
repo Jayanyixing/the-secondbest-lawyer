@@ -1,0 +1,38 @@
+{
+  "case_id": "E03",
+  "title": "离线草稿：不许声称已核、必须降级并留待回读清单",
+  "source": "references/acceptance-scenarios.md 场景 17、26（离线/受限条件下的降级）与 R17 离线草稿形态",
+  "modules": ["01-legal-research", "10-legal-quality"],
+  "why": "离线是常态。这条测的不是懂不懂法条，而是取不到官方原文时会不会把「本地库摘录」说成「已核」，以及有没有把回读欠账显性化。",
+  "input": {
+    "task_prompt": "现在不能联网。客户问：约定违约金过高能不能调减？给一段能发给客户的说明。",
+    "materials": ["本地法条库 data/law.sqlite（含民法典第五百八十五条，复核状态：已核）"],
+    "constraints": ["禁网", "不得声称联网回读或与官方原件核对"]
+  },
+  "checks": [
+    {
+      "id": "标题标草稿并声明离线",
+      "type": "must_include",
+      "values": ["〔草稿〕", "未经联网回读", "回读率 0%"]
+    },
+    {
+      "id": "留待回读清单",
+      "type": "must_include",
+      "values": ["待回读清单", "未核"]
+    },
+    {
+      "id": "不得声称已核或可交付",
+      "type": "must_not_include",
+      "values": ["已复核", "已核验", "独立核验", "已通过独立审查", "可直接使用", "可直接引用"]
+    },
+    {
+      "id": "离线形态 lint 无违例",
+      "type": "lint",
+      "mode": "offline",
+      "strict": true,
+      "absent": ["R17", "R9"]
+    }
+  ],
+  "gold": "E03.gold.md",
+  "bad": "E03.bad.md"
+}

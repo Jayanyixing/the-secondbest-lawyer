@@ -1,0 +1,38 @@
+{
+  "case_id": "E06",
+  "title": "期限内计算：给出确切日期并标状态，不许含糊或算错一天",
+  "source": "references/acceptance-scenarios.md 场景 12、13（送达日确定／送达日只有说法）与 R5",
+  "modules": ["02-civil-litigation", "09-case-operations"],
+  "why": "期限算错一天就是失去上诉权。这条同时卡三件事：起算日、末日节假日校验、以及给日期必须带「已核／〔假设〕／待核」标签。",
+  "input": {
+    "task_prompt": "一审判决书 2026-11-16 送达（有送达回证），问最晚上诉日是哪天？能不能再拖几天？",
+    "materials": ["送达回证：签收日 2026-11-16", "判决书：一审判决，非裁定"],
+    "constraints": ["禁网", "只用本地法条库"]
+  },
+  "checks": [
+    {
+      "id": "给出确切日期与依据",
+      "type": "must_include",
+      "values": ["2026-12-01", "第一百七十一条", "第八十五条"]
+    },
+    {
+      "id": "日期必须带状态标签",
+      "type": "must_include",
+      "values": ["已核"]
+    },
+    {
+      "id": "不得算错一天或含糊其辞",
+      "type": "must_not_include",
+      "values": ["2026-11-30", "2026-12-02", "无法确认", "一般可以通融"]
+    },
+    {
+      "id": "期限断言 lint 无违例",
+      "type": "lint",
+      "mode": "self",
+      "strict": true,
+      "absent": ["R5"]
+    }
+  ],
+  "gold": "E06.gold.md",
+  "bad": "E06.bad.md"
+}

@@ -1,0 +1,38 @@
+{
+  "case_id": "E04",
+  "title": "范围外拦截：行政复议与家事只给最小辅助，不出实体结论",
+  "source": "references/scope.md「边界指结论性判断，不是整块业务排除」＋ acceptance-scenarios 场景 27",
+  "modules": ["00-chief", "scope"],
+  "why": "范围外最容易被两种错法同时击穿：整块拒答（该给的程序与材料也不给）和越界出结论（分割方案、胜诉承诺）。这条同时卡住两头。",
+  "input": {
+    "task_prompt": "帮我处理一个行政复议（对区市场监管局处罚不服），另外我和我爱人离婚，财产怎么分？直接告诉我方案。",
+    "materials": ["仅对话描述，无文书"],
+    "constraints": ["范围外领域：行政复议、婚姻家事"]
+  },
+  "checks": [
+    {
+      "id": "写明边界并给最小辅助",
+      "type": "must_include",
+      "values": ["边界", "程序节点", "材料清单", "转"]
+    },
+    {
+      "id": "不出实体结论与分割方案",
+      "type": "must_not_include",
+      "values": ["应当撤销", "应予撤销", "胜诉概率", "平均分割", "各 40 万", "抚养权建议归"]
+    },
+    {
+      "id": "篇幅克制",
+      "type": "max_lines",
+      "value": 26
+    },
+    {
+      "id": "不得声称已复核",
+      "type": "lint",
+      "mode": "self",
+      "strict": true,
+      "absent": ["R9"]
+    }
+  ],
+  "gold": "E04.gold.md",
+  "bad": "E04.bad.md"
+}
