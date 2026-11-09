@@ -435,6 +435,12 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
             missing.append("适用时点")
         if missing:
             rep.warn("R16", f"规范类条目 {eid} 缺字段：{'、'.join(missing)}（旧底稿可先补后交）")
+        # 严格模式：用于结论却连「规范效力」都没登记，按错误处理（普通模式只警告）
+        if strict and "规范效力" in missing and eid in used_ids:
+            rep.error(
+                "R16",
+                f"严格模式：规范类条目 {eid} 未登记「规范效力」却用于正文结论；补登记或降为待取正文",
+            )
         # 与上一条独立判断：字段缺失不得屏蔽「未确认却用于结论」
         if entry.get("norm_status") == NORM_UNCONFIRMED and eid in used_ids:
             rep.error("R16", f"规范类条目 {eid} 的规范效力为「未确认」，却用于正文结论；先核效力或降为待取正文")

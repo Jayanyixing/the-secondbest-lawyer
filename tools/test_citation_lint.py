@@ -54,6 +54,21 @@ def run_ledger(body: str, ledger: dict) -> tuple[int, str]:
         return r.returncode, r.stdout + r.stderr
 
 
+def run_ledger_strict(body: str, ledger: dict) -> tuple[int, str]:
+    import json
+
+    with tempfile.TemporaryDirectory() as d:
+        p = pathlib.Path(d) / "doc.md"
+        l = pathlib.Path(d) / "ledger.json"
+        p.write_text(body, encoding="utf-8")
+        l.write_text(json.dumps(ledger, ensure_ascii=False), encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, str(LINT), str(p), "--ledger", str(l), "--strict"],
+            capture_output=True, text=True,
+        )
+        return r.returncode, r.stdout + r.stderr
+
+
 def run_file(path, *extra: str) -> tuple[int, str]:
     r = subprocess.run(
         [sys.executable, str(LINT), str(path), *extra], capture_output=True, text=True
@@ -144,6 +159,30 @@ def main() -> int:
     _chk(not (code != 0), f"否定句（不是可交付／无一条已核实）应通过，实际 {code}：{out[-200:]}", fails)
     code, out = run_file(d / "offline-draft-nomark.md", "--mode", "offline")
     _chk(not (code == 0 or "〔草稿〕" not in out), "离线稿缺〔草稿〕应报错", fails)
+
+    # R16 fixture：未确认 + 缺适用时点 + 已用于结论 → 错误与警告同时出现；已废止只警告
+    code, out = run_fixture("norm-status-conflict.md", "norm-status-conflict.json")
+    _chk(code == 1, f"效力未确认却用于结论应退出 1，实际 {code}", fails)
+    _chk("N-01 的规范效力为「未确认」" in out, "R16 未报「未确认却用于结论」错误", fails)
+    _chk("N-01 缺字段：适用时点" in out, "R16 缺字段警告被错误分支屏蔽", fails)
+    _chk("N-02 的规范效力为「未确认」" not in out, "已废止被误判为未确认", fails)
+    _chk("N-02 缺字段：适用时点" in out, "已废止但缺适用时点应给警告", fails)
+
+    # 严格模式：用于结论但缺「规范效力」→ 错误；普通模式只警告
+    code, out = run_ledger(body, old)
+    _chk(code == 0, f"普通模式下旧底稿缺效力应只警告，实际退出码 {code}", fails)
+    code, out = run_ledger_strict(body, old)
+    _chk(code == 1 and "严格模式" in out, f"严格模式缺效力却用于结论应报错，实际 {code}", fails)
+
+    # R16 内联底稿：只出一条汇总提示，不逐条刷屏
+    code, out = run(BODY_TMPL.format(tag="〔N-01〕", id_cell="N-01《劳动合同法》第三十八条"))
+    _chk("未登记「规范效力」" in out, "内联底稿缺规范效力未给汇总提示", fails)
+    _chk(out.count("未登记「规范效力」") == 1, "内联底稿缺规范效力逐条刷屏", fails)
+    _chk(code == 0, f"内联缺规范效力应只提示不阻断，实际退出码 {code}", fails)
+
+    # R18 商业库不得记官方已核
+    code, out = run_fixture("commercial-verified.md", "commercial-verified.json")
+    _chk(code == 1 and "[R18]" in out, f"商业库写已核应报 R18 且退出 1，实际 {code}", fails)
 
     if fails:
         for f in fails:
