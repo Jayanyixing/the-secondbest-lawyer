@@ -345,7 +345,10 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
                 reread = str(entry.get("reread") or "")
                 if not reread.startswith("已回读"):
                     msg = f"第 {idx} 行引用的 [{tag}] 未回读原文（交付前应回读并记录日期）"
-                    rep.error("R15", msg) if strict else rep.warn("R15", msg)
+                    if strict and mode != "offline":
+                        rep.error("R15", msg)
+                    else:
+                        rep.warn("R15", msg)
                 elif not REREAD_RE.search(reread):
                     rep.warn(
                         "R15",
@@ -419,10 +422,22 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         else:
             seen[q] = entry["id"]
 
+    # 离线模式：必须是草稿，首页要声明，文末要待回读清单
+    if mode == "offline":
+        if "〔草稿〕" not in text:
+            rep.error("R15", "离线模式要求标题带〔草稿〕：离线稿是草稿，不可作为定稿")
+        if "未经联网回读" not in text:
+            rep.error("R15", "离线模式要求首页写明「本稿未经联网回读……回读率 0%」")
+        if not re.search(r"待回读清单|待回读条目", text):
+            rep.error("R15", "离线模式要求文末给「待回读清单」（条目编号＋建议核对的官方来源）")
+        for word in ("可交付", "可直接使用", "已核实", "已核（与官方原文一致）"):
+            if word in text:
+                rep.error("R15", f"离线稿不得出现「{word}」：离线只能出草稿")
+
     return rep
 
 
-def render(rep: Report, body: Path) -> str:
+def render(rep: Report, body: Path, mode: str = "self") -> str:
     out = [f"引用校验：{body}"]
     if rep.errors:
         out.append(f"\n错误 {len(rep.errors)} 条：")
@@ -430,6 +445,12 @@ def render(rep: Report, body: Path) -> str:
     if rep.warnings:
         out.append(f"\n警告 {len(rep.warnings)} 条：")
         out += [f"  - {w}" for w in rep.warnings]
+    if mode == "offline":
+        if rep.errors:
+            out.append("\n未通过：离线稿本身不合规，先补〔草稿〕标注、首页声明与待回读清单。")
+        else:
+            out.append("\n通过（离线草稿）：只能作为草稿提交，回读后转定稿，不得标「可交付」。")
+        return "\n".join(out)
     if not rep.errors and not rep.warnings:
         out.append("\n通过：形式一致性检查无问题。注意——通过≠已核实，真伪仍需回读与律师复核。")
     elif not rep.errors:
@@ -443,7 +464,7 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="法律交付物引用校验器")
     ap.add_argument("body", type=Path, help="待校验的交付物（markdown）")
     ap.add_argument("--ledger", type=Path, help="引用底稿：citations.json 或 markdown 表格")
-    ap.add_argument("--mode", choices=["self", "review"], default="self", help="自查或独立复核模式")
+    ap.add_argument("--mode", choices=["self", "review", "offline"], default="self", help="自查／独立复核／离线草稿模式")
     ap.add_argument("--strict", action="store_true", help="未回读按错误处理")
     ap.add_argument("--json", action="store_true", help="以 JSON 输出")
     args = ap.parse_args(argv)
@@ -461,7 +482,7 @@ def main(argv: list[str]) -> int:
     if args.json:
         print(json.dumps({"errors": rep.errors, "warnings": rep.warnings}, ensure_ascii=False, indent=2))
     else:
-        print(render(rep, args.body))
+        print(render(rep, args.body, args.mode))
     return 1 if rep.errors else 0
 
 

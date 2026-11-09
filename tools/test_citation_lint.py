@@ -42,6 +42,13 @@ def run_ledger(body: str, ledger: dict) -> tuple[int, str]:
         return r.returncode, r.stdout + r.stderr
 
 
+def run_file(path, *extra: str) -> tuple[int, str]:
+    r = subprocess.run(
+        [sys.executable, str(LINT), str(path), *extra], capture_output=True, text=True
+    )
+    return r.returncode, r.stdout + r.stderr
+
+
 def main() -> int:
     fails = []
 
@@ -116,12 +123,21 @@ def main() -> int:
     if code == 0 or "规范效力为「未确认」" not in out:
         fails.append("规范效力未确认用于结论应报错并退出 1")
 
+    # 离线模式：草稿合规，缺〔草稿〕即不合规
+    d = HERE.parent / "tests" / "fixtures"
+    code, out = run_file(d / "offline-draft.md", "--mode", "offline")
+    if code != 0 or "离线草稿" not in out or "可交付" in out.replace("不得标「可交付」", ""):
+        fails.append(f"离线草稿应通过且不提可交付，实际 {code}：{out[-160:]}")
+    code, out = run_file(d / "offline-draft-nomark.md", "--mode", "offline")
+    if code == 0 or "〔草稿〕" not in out:
+        fails.append("离线稿缺〔草稿〕应报错")
+
     if fails:
         for f in fails:
             print("失败：" + f)
         print(f"结果：{len(fails)} 项不通过")
         return 1
-    print(f"结果：{9 - len(fails)}/9 通过")
+    print(f"结果：{11 - len(fails)}/11 通过")
     return 0
 
 
