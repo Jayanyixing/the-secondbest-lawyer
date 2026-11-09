@@ -794,8 +794,8 @@ def check_conclusion_sources(rep: "Report", tables: list[dict]) -> None:
                     continue
                 rep.warn(
                     "R21",
-                    f"第 {ln} 行出现法律结论「{word}」但没有 N-／C- 编号："
-                    f"{seg.strip()[:40]}；补底稿编号，或改写为「法律判断待核（未登记依据）」",
+                    f"第 {ln} 行出现法律结论「{word}」：{seg.strip()[:40]}；"
+                    "该句未就近挂编号；若同行他栏已引用，请确认该编号确实支持这句结论",
                 )
                 break
 

@@ -339,7 +339,7 @@ def main() -> int:
     code, out = run_fixture("conclusion-unsourced.md")
     _chk(code == 0, f"R21 只警告不阻断，实际 {code}", fails)
     _chk(out.count("[R21]") == 1, f"只应提示没有编号的那一行，实际 {out.count('[R21]')} 条", fails)
-    _chk("法律判断待核" in out, "R21 提示应给出改写方式，实际未给", fails)
+    _chk("未就近挂编号" in out and "同行他栏已引用" in out, "R21 文案应说明就近挂编号与同行他栏的情形", fails)
     code, out = run_fixture("conclusion-unsourced.md", None, "--strict")
     _chk(code == 0 and "[R21]" in out, f"严格模式下 R21 仍只是警告，实际 {code}", fails)
 
