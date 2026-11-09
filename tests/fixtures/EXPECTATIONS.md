@@ -18,6 +18,8 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `boilerplate-quote.md/.json` | `--ledger …` | 1 | R13 | 摘录只有「本院认为」，任何判决都有，无法证伪 |
 | `reused-quote.md/.json` | `--ledger …` | 0（警告） | R14 | 同一摘录被两个不同结论复用 |
 | `reused-quote.md/.json` | `--ledger … --strict` | 1 | R14 | 严格模式下摘录复用升为错误 |
+| `check-vocab-outliers.md/.json` | `--ledger …` | 0（警告） | R0 | `未经官方核实`／`尚未经官方核对`／`未能与官方原文核对`／`未完成核对`／`核对中`／`待核` 六种写法都按未核处理，并提示写法不在词表内 |
+| `commercial-verified-outofvocab.md/.json` | `--ledger …` | 1 | R18 | 商业库 + 词表外肯定写法「基本核实」：归一记未核，但仍算已核声称，报 R18 |
 | `commercial-unverified-variants.md/.json` | `--ledger …` | 0（警告） | R0 | `未核（仅商业库或转载）`／`未经核实`／`未能核实`／`尚未核` 都归为未核，不得报 R18 |
 | `future-reread.md/.json` | `--ledger …` | 1 | R15 | 回读日期写成 2099 年，晚于运行当天 |
 | `offline-draft.md` | `--mode offline` | 0 | — | 合规离线草稿 |

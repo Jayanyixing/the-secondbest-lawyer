@@ -94,23 +94,70 @@ SCOPE_CANON = {"full", "excerpt", "abstract", "title", "none"}
 EFFECT_CANON = {"effective", "unconfirmed", "subsequent"}
 
 
-CHECK_NEG_RE = re.compile(r"(未|尚未|没有|无法|不能|不予)(经|能|予|获得|得到)?核")
+CHECK_NEG_RE = re.compile(r"(未|尚未|没有|无法|不能|不予)[^核]{0,6}核")
 
 
-def normalize_check(raw) -> str:
-    """官方复核取值：先把「未经核实」「未能核实」「尚未核」这类否定写法判为未核。
+CHECK_VERIFIED_TEXT = {
+    "verified",
+    "已核",
+    "已核实",
+    "官方已核",
+    "已核（与官方原文一致）",
+}
+CHECK_UNVERIFIED_TEXT = {
+    "unverified",
+    "未核",
+    "未核（仅商业库或转载）",
+    "未经核实",
+    "未能核实",
+    "尚未核",
+}
+CHECK_PENDING_RE = re.compile(r"(待核|待核实|核对中|核实中|核中|核对中)")
 
-    正写「已核（与官方原文一致）」不受影响；判定顺序是先否定、后正向，避免
-    「未经核实」因为不含「已核」而被归到 unknown。
+
+def normalize_check(raw, out_of_vocab: list[str] | None = None) -> str:
+    """官方复核取值：**默认拒绝**——只有词表内的写法才可能被判为「已核」。
+
+    1. 词表内英文值原样返回；已登记的肯定变体（已核／已核实／官方已核／
+       「已核（与官方原文一致）」）返回 `verified`；已登记的否定变体返回 `unverified`。
+    2. 其余任何写法，只要带「核」字（含「未经官方核实」「尚未经官方核对」
+       「未能与官方原文核对」「未完成核对」「核对中」「待核」「基本核实」），
+       一律按 `unverified` 处理，并把原写法交给调用方提示——宁可多标未核，
+       不可凭「核」字猜测已核。
     """
     if raw is None or not str(raw).strip():
         return "unknown"
     v = str(raw).strip()
     if v in CHECK_CANON:
         return v
-    if CHECK_NEG_RE.search(v):
+    if v in ("na", "不适用"):
+        return "na"
+    if v in CHECK_VERIFIED_TEXT:
+        return "verified"
+    if v in CHECK_UNVERIFIED_TEXT:
         return "unverified"
-    return pick(CHECK_WORDS, v, "unknown")
+    if CHECK_NEG_RE.search(v) or CHECK_PENDING_RE.search(v) or "核" in v:
+        if out_of_vocab is not None:
+            out_of_vocab.append(v)
+        return "unverified"
+    return "unknown"
+
+
+def claims_official_verified(raw) -> bool:
+    """文字本身是否在声称「已与官方原文核对过」。
+
+    与 normalize_check 分工不同：归一按默认拒绝（拿不准就记未核），这里问的是
+    「这句话读起来像不像声称已核」——「基本核实」虽不在词表内，仍算声称，商业库
+    来源就该报 R18；「待核」「核对中」「未经核实」不算声称。
+    """
+    v = str(raw or "").strip()
+    if not v:
+        return False
+    if v in CHECK_VERIFIED_TEXT:
+        return True
+    if CHECK_NEG_RE.search(v) or CHECK_PENDING_RE.search(v):
+        return False
+    return "核" in v
 
 
 def normalize_enum(raw, words, canon: set[str], default: str = "unknown") -> str:
@@ -123,13 +170,14 @@ def normalize_enum(raw, words, canon: set[str], default: str = "unknown") -> str
     return pick(words, v, default)
 
 
-def normalize_entries(entries: list[dict]) -> list[dict]:
+def normalize_entries(entries: list[dict], out_of_vocab: list[str] | None = None) -> list[dict]:
     """统一各来源（JSON / markdown 表格 / 内联）的枚举取值。"""
     for e in entries:
         if e.get("norm_status") not in (None, ""):
             e["norm_status"] = normalize_norm_status(e["norm_status"])
         if e.get("official_check") is not None:
-            e["official_check"] = normalize_check(e["official_check"])
+            e["official_check_raw"] = e["official_check"]
+            e["official_check"] = normalize_check(e["official_check"], out_of_vocab)
         if e.get("channel") is not None:
             e["channel"] = normalize_enum(e["channel"], CHANNEL_WORDS, CHANNEL_CANON)
         if e.get("read_scope") is not None:
@@ -366,7 +414,8 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
             rep.warn("R0", f"未指定 --ledger，已从文书内表格读到底稿 {len(ledger)} 条（字段不全，只做编号与摘录检查）")
     by_id = {e["id"]: e for e in ledger if e.get("id")}
     known_numbers = {norm(e["number"]) for e in ledger if e.get("number")}
-    ledger = normalize_entries(ledger)
+    out_of_vocab: list[str] = []
+    ledger = normalize_entries(ledger, out_of_vocab)
     used_ids: dict[str, list[int]] = {}
 
     # R2 底稿字段完整性
@@ -532,11 +581,21 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         eid = entry.get("id") or ""
         if not eid:
             continue
-        if entry.get("channel") == "commercial" and entry.get("official_check") == "verified":
+        if entry.get("channel") == "commercial" and claims_official_verified(
+            entry.get("official_check_raw") or entry.get("official_check")
+        ):
             rep.error(
                 "R18",
                 f"条目 {eid} 来源为商业库，却把官方复核写成「已核」；商业库只能记「未核（仅商业库或转载）」",
             )
+
+    if out_of_vocab:
+        distinct = list(dict.fromkeys(out_of_vocab))
+        rep.warn(
+            "R0",
+            f"官方复核写法不在词表内，已按未核处理：{'、'.join(distinct[:6])}"
+            f"{' 等' if len(distinct) > 6 else ''}",
+        )
 
     # R0 官方复核未核条数（提示级：警告，不阻断交付）
     used_unverified = [

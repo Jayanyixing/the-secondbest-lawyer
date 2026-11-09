@@ -203,6 +203,20 @@ def main() -> int:
     _chk("[R18]" not in out, "否定写法不得触发 R18", fails)
     _chk("官方复核未核 4 条" in out, "否定写法应汇总为「官方复核未核 4 条」", fails)
 
+    # 官方复核默认拒绝：词表外带「核」一律按未核，不得报 R18
+    six = ["未经官方核实", "尚未经官方核对", "未能与官方原文核对", "未完成核对", "核对中", "待核"]
+    for v in six:
+        _chk(cl2.normalize_check(v) == "unverified", f"「{v}」应归一为 unverified", fails)
+        _chk(not cl2.claims_official_verified(v), f"「{v}」不得被当作已核声称", fails)
+    _chk(cl2.normalize_check("基本核实") == "unverified", "词表外「基本核实」按未核处理", fails)
+    _chk(cl2.claims_official_verified("基本核实"), "「基本核实」仍算已核声称，商业库应报 R18", fails)
+    code, out = run_fixture("check-vocab-outliers.md", "check-vocab-outliers.json")
+    _chk(code == 0, f"词表外写法不应阻断，实际 {code}", fails)
+    _chk("[R18]" not in out, "词表外写法不得触发 R18", fails)
+    _chk("不在词表内，已按未核处理" in out, "缺「按未核处理」提示", fails)
+    code, out = run_fixture("commercial-verified-outofvocab.md", "commercial-verified-outofvocab.json")
+    _chk(code == 1 and "[R18]" in out, f"商业库+「基本核实」应报 R18，实际 {code}", fails)
+
     # 对抗样例：每种写法都要被拦住（详见 tests/fixtures/EXPECTATIONS.md）
     code, out = run_fixture("commercial-verified-variants.md", "commercial-verified-variants.json")
     _chk(code == 1 and out.count("[R18]") == 3, f"三种「已核」变体应各报 R18，实际 {out.count('[R18]')}", fails)

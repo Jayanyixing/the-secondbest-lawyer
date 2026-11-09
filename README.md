@@ -319,7 +319,7 @@ python3 tools/eval_score.py eval/scores.csv
 ## 自检：改完先跑一遍
 
 ```bash
-python3 tools/test_citation_lint.py   # 引用校验器回归，61/61 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
+python3 tools/test_citation_lint.py   # 引用校验器回归，79/79 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5
@@ -348,6 +348,7 @@ python3 tools/lawdb.py verify         # 法条文件哈希，84/84
 - 法条条号与数值一律现场核，技能内不写死条文内容——避免技能自己制造错误引用。
 - 行政、婚姻家事继承、破产重整、知识产权实体比对、涉税、涉外等属范围外，只给边界与最小辅助，见 [`scope.md`](the-secondbest-lawyer/references/scope.md)；**劳动人事不属范围外**，由 [`14-labor.md`](the-secondbest-lawyer/references/14-labor.md) 覆盖（不做精确测算、伤残等级、竞业效力终局判断）。
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。
+- 官方复核栏按**默认拒绝**归一：只有词表内的写法能记「已核」，其余带「核」字的写法（「未经官方核实」「核对中」「待核」「基本核实」等）一律按「未核」并提示写法不在词表内；商业库来源若写词表外的肯定说法（如「基本核实」），仍按 R18 报错。
 - `citation_lint.py` **只验形式**：编号登记、摘录位置、字段完整性、状态词合法。它不判断摘录是否真的支持那句话，也不判断案情与规则是否匹配——语义越界只能靠人工抽样复核。
 - 编造一个**看似合理的过去日期**（例如把回读日期写成上周某天）无法被机械识别：校验器只能拦未来日期、缺日期和明显矛盾，真假仍以回读记录与原文为准。
 - 官方复核**多数情况仍会记「未核」**：`npc.gov.cn` 深链被 WAF 302 回首页、`flk.npc.gov.cn` 只返回前端空壳，法条常只能从维基文库等转载件读；此时交付物首页会写「官方复核未核 N 条」，不是遗漏，是如实标注。
