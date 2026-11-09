@@ -58,16 +58,21 @@ def normalize_norm_status(raw):
 
 
 NEG_MARKERS = re.compile(r"(不|非|无|未|勿|别|没有|并非|不是|不得|不能|不可|尚未)")
+CLAUSE_BREAK = re.compile(r"[，,。；;、！!？?\n]")
 
 
 def affirms_claim(text: str, word: str) -> bool:
     """正文是否**肯定地**声称了 word。
 
-    「本稿不是可交付稿」「无一条已核实」这类否定句不算声称——否则离线稿只要
-    自我否认就会被打回。判定窗口取 word 前 8 个字，窗口内出现否定词即视为否定。
+    否定只在**同一分句内**算数：「本稿不是可交付稿」「无一条已核实」不算声称，
+    但「本稿未经回读，已核实」是在肯定第二分句，仍算声称。故先按逗号、句号、
+    分号、顿号、换行切出所在分句，只看分句内 word 之前的部分有没有否定词。
     """
     for m in re.finditer(re.escape(word), text):
-        before = text[max(0, m.start() - 8):m.start()]
+        start = 0
+        for b in CLAUSE_BREAK.finditer(text, 0, m.start()):
+            start = b.end()
+        before = text[start:m.start()]
         if NEG_MARKERS.search(before):
             continue
         return True

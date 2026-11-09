@@ -79,11 +79,12 @@ def run_file(path, *extra: str) -> tuple[int, str]:
 FIXTURES = HERE.parent / "tests" / "fixtures"
 
 
-def run_fixture(name: str, ledger: str | None = None) -> tuple[int, str]:
+def run_fixture(name: str, ledger: str | None = None, *extra: str) -> tuple[int, str]:
     doc = FIXTURES / name
     args = [sys.executable, str(LINT), str(doc)]
     if ledger:
         args += ["--ledger", str(FIXTURES / ledger)]
+    args += list(extra)
     r = subprocess.run(args, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 
@@ -173,6 +174,14 @@ def main() -> int:
     _chk(code == 0, f"普通模式下旧底稿缺效力应只警告，实际退出码 {code}", fails)
     code, out = run_ledger_strict(body, old)
     _chk(code == 1 and "严格模式" in out, f"严格模式缺效力却用于结论应报错，实际 {code}", fails)
+
+    # 严格模式 fixture：普通模式通过（仅警告），--strict 报 R16 错误
+    code, out = run_fixture("strict-missing-effect.md", "strict-missing-effect.json")
+    _chk(code == 0, f"普通模式缺规范效力应通过，实际 {code}", fails)
+    _chk("[R16]" in out and "未登记「规范效力」" not in out, "普通模式不应出现严格模式错误", fails)
+    code, out = run_fixture("strict-missing-effect.md", "strict-missing-effect.json", "--strict")
+    _chk(code == 1, f"严格模式缺规范效力应退出 1，实际 {code}", fails)
+    _chk("严格模式" in out, "严格模式未给出 R16 错误文案", fails)
 
     # R16 内联底稿：只出一条汇总提示，不逐条刷屏
     code, out = run(BODY_TMPL.format(tag="〔N-01〕", id_cell="N-01《劳动合同法》第三十八条"))
