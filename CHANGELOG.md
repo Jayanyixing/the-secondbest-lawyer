@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2026-11-09（v2.39.6）「提交前须核」清单加建议核对入口，北京政府子域断言
+
+- `citation.md` 把「提交前须核」清单固定为四列：编号｜待核事项｜建议核对入口｜核对备注；按条目类型预置入口（北京法院文件→`bjcourt.gov.cn`／`beijing.gov.cn`；检察文件→最高检、北京市检官网；商业库案例→人民法院案例库或裁判文书网；法规规章→国家规章库／人大网）。
+- 核对备注只作人工记录，不参与任何计数：首页「官方复核未核 N 条」仍按底稿 `official_check` 统计，手填备注不改变数字。
+- 实测并补断言：`sf.beijing.gov.cn`、`rsj.beijing.gov.cn` 作为官方渠道出处通过（`beijing.gov.cn` 子域规则覆盖）；`bjcourt.gov.cn` 仍拒。
+- 断言 121→123。
+
 ## 2026-11-09（v2.39.5）北京政府门户入白名单，开放表述改逐一列明
 
 - 经用户决定：在 `court.gov.cn`／`npc.gov.cn`／`www.gov.cn/zhengce/xxgk/gjgzk/`／`bjrd.gov.cn` 之外，新增 `beijing.gov.cn`（北京市政府门户）。`spp.gov.cn`（最高检）、`moj.gov.cn`（司法部）、`bjcourt.gov.cn`（北京法院网）**不纳入**。

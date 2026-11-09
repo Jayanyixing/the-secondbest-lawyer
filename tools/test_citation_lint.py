@@ -240,6 +240,8 @@ def main() -> int:
     _chk(cl2.official_domain_ok("https://www.spp.gov.cn/x.html") is False, "最高检站点仍不在白名单", fails)
     _chk(cl2.official_domain_ok("https://www.moj.gov.cn/x.html") is False, "司法部站点仍不在白名单", fails)
     _chk(cl2.official_domain_ok("https://bjcourt.gov.cn/x.html") is False, "北京法院网仍不在白名单", fails)
+    _chk(cl2.official_domain_ok("https://sf.beijing.gov.cn/x.html") is True, "北京市司法局子域应放行（beijing.gov.cn 子域）", fails)
+    _chk(cl2.official_domain_ok("https://rsj.beijing.gov.cn/zhengce/x.html") is True, "北京市人社局子域应放行", fails)
     code, out = run_fixture("official-nonwhitelist.md", "official-nonwhitelist.json")
     _chk(code == 1, f"官方渠道 + 白名单外域名应阻断，实际 {code}", fails)
     _chk(out.count("[R18]") == 2, f"应报 2 条 R18（pkulaw/lexiscn），实际 {out.count('[R18]')}", fails)
