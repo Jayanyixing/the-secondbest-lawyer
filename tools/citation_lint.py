@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import date
 import re
 import sys
 from pathlib import Path
@@ -57,6 +58,13 @@ def normalize_norm_status(raw):
     return pick(NORM_STATUS_WORDS, raw, NORM_UNCONFIRMED)
 
 
+def _is_future(day: str) -> bool:
+    try:
+        return date.fromisoformat(day) > date.today()
+    except ValueError:
+        return False
+
+
 NEG_MARKERS = re.compile(r"(不|非|无|未|勿|别|没有|并非|不是|不得|不能|不可|尚未)")
 CLAUSE_BREAK = re.compile(r"[，,。；;、！!？?\n]")
 
@@ -79,11 +87,36 @@ def affirms_claim(text: str, word: str) -> bool:
     return False
 
 
+CHECK_CANON = {"verified", "unverified", "na"}
+CHANNEL_WORDS = [("官方", "official"), ("商业", "commercial"), ("导出", "user_export"), ("口述", "oral")]
+CHANNEL_CANON = {"official", "commercial", "user_export", "oral"}
+SCOPE_CANON = {"full", "excerpt", "abstract", "title", "none"}
+EFFECT_CANON = {"effective", "unconfirmed", "subsequent"}
+
+
+def normalize_enum(raw, words, canon: set[str], default: str = "unknown") -> str:
+    """JSON 里可能写中文（「已核（与官方原文一致）」），表格里可能写英文，两边都归一。"""
+    if raw is None or not str(raw).strip():
+        return default
+    v = str(raw).strip()
+    if v in canon:
+        return v
+    return pick(words, v, default)
+
+
 def normalize_entries(entries: list[dict]) -> list[dict]:
-    """统一各来源（JSON / markdown 表格 / 内联）的规范效力取值。"""
+    """统一各来源（JSON / markdown 表格 / 内联）的枚举取值。"""
     for e in entries:
         if e.get("norm_status") not in (None, ""):
             e["norm_status"] = normalize_norm_status(e["norm_status"])
+        if e.get("official_check") is not None:
+            e["official_check"] = normalize_enum(e["official_check"], CHECK_WORDS, CHECK_CANON)
+        if e.get("channel") is not None:
+            e["channel"] = normalize_enum(e["channel"], CHANNEL_WORDS, CHANNEL_CANON)
+        if e.get("read_scope") is not None:
+            e["read_scope"] = normalize_enum(e["read_scope"], SCOPE_WORDS, SCOPE_CANON)
+        if e.get("effectiveness") is not None:
+            e["effectiveness"] = normalize_enum(e["effectiveness"], EFFECT_WORDS, EFFECT_CANON)
     return entries
 
 BOILERPLATE_QUOTES = [
@@ -395,6 +428,11 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
                         rep.error("R15", msg)
                     else:
                         rep.warn("R15", msg)
+                elif (m_date := REREAD_RE.search(reread)) and _is_future(m_date.group(1)):
+                    rep.error(
+                        "R15",
+                        f"[{tag}] 的回读日期 {m_date.group(1)} 晚于今天（{date.today().isoformat()}）：回读只能记已发生的日期",
+                    )
                 elif not REREAD_RE.search(reread):
                     rep.warn(
                         "R15",

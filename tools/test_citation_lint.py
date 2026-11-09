@@ -182,6 +182,18 @@ def main() -> int:
     _chk(code == 1 and "[R17]" in out, f"「未经联网回读，但引用均已核实」应报 R17，实际 {code}", fails)
     _chk("已核实" in out, "R17 未指出被肯定的「已核实」", fails)
 
+    # 对抗样例：每种写法都要被拦住（详见 tests/fixtures/EXPECTATIONS.md）
+    code, out = run_fixture("commercial-verified-variants.md", "commercial-verified-variants.json")
+    _chk(code == 1 and out.count("[R18]") == 3, f"三种「已核」变体应各报 R18，实际 {out.count('[R18]')}", fails)
+    code, out = run_fixture("boilerplate-quote.md", "boilerplate-quote.json")
+    _chk(code == 1 and "[R13]" in out, f"套话摘录应报 R13，实际 {code}", fails)
+    code, out = run_fixture("reused-quote.md", "reused-quote.json")
+    _chk(code == 0 and "[R14]" in out, f"摘录复用应警告 R14 且不阻断，实际 {code}", fails)
+    code, out = run_fixture("future-reread.md", "future-reread.json")
+    _chk(code == 1 and "[R15]" in out, f"未来回读日期应报 R15，实际 {code}", fails)
+    code, out = run_fixture("norm-status-out-of-vocab.md", "norm-status-out-of-vocab.json")
+    _chk(code == 1 and "未确认" in out, f"词表外效力应按未确认报错，实际 {code}", fails)
+
     # 严格模式 fixture：普通模式通过（仅警告），--strict 报 R16 错误
     code, out = run_fixture("strict-missing-effect.md", "strict-missing-effect.json")
     _chk(code == 0, f"普通模式缺规范效力应通过，实际 {code}", fails)

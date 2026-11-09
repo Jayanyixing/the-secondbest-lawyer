@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-11-09（v2.38.8）对抗样例与未来日期检查
+
+- 修 JSON 底稿的枚举未归一问题：`official_check` 写「已核（与官方原文一致）」「已核实」「官方已核」时，R18 原先认不出（只认 `verified`）。新增 `normalize_enum()`，对 `official_check`／`channel`／`read_scope`／`effectiveness` 同时接受中文与英文写法。
+- R15 新增：回读日期晚于运行当天 → 错误（原先未来日期完全放行）。
+- 新增对抗样例 5 组：`commercial-verified-variants`（R18×3）、`boilerplate-quote`（R13）、`reused-quote`（R14 警告）、`future-reread`（R15）、`norm-status-out-of-vocab`（R16）。期望值统一记在 `tests/fixtures/EXPECTATIONS.md`。
+
 ## 2026-11-09（v2.38.7）否定判定限定在同一分句
 
 - `affirms_claim()` 原按「word 前 8 个字」找否定词，窗口会跨过分句边界：`本稿未经回读，已核实` 里第二分句的肯定被第一分句的「未」吞掉。改为先按 `，,。；;、！？换行` 切出所在分句，只在分句内判定。
