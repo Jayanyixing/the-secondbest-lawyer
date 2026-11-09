@@ -363,6 +363,20 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         if entry.get("id") and entry["id"] not in used_ids:
             rep.warn("R10", f"底稿条目 {entry['id']} 未在正文引用（可能多余）")
 
+    # R0 官方复核未核条数（提示级：警告，不阻断交付）
+    used_unverified = [
+        e["id"]
+        for e in ledger
+        if e.get("id") and e["id"] in used_ids and e.get("official_check") == "unverified"
+    ]
+    if used_unverified:
+        rep.warn(
+            "R0",
+            f"官方复核未核 {len(used_unverified)} 条（{', '.join(used_unverified[:6])}"
+            f"{' 等' if len(used_unverified) > 6 else ''}）：回读已通过，但官方原文未亲核；"
+            "正式诉讼材料请单列「提交前须核」清单",
+        )
+
     # R14 同一摘录被不同条目复用
     seen: dict[str, str] = {}
     for entry in ledger:

@@ -28,6 +28,20 @@ def run(text: str) -> tuple[int, str]:
         return r.returncode, r.stdout + r.stderr
 
 
+def run_ledger(body: str, ledger: dict) -> tuple[int, str]:
+    import json
+
+    with tempfile.TemporaryDirectory() as d:
+        p = pathlib.Path(d) / "doc.md"
+        l = pathlib.Path(d) / "ledger.json"
+        p.write_text(body, encoding="utf-8")
+        l.write_text(json.dumps(ledger, ensure_ascii=False), encoding="utf-8")
+        r = subprocess.run(
+            [sys.executable, str(LINT), str(p), "--ledger", str(l)], capture_output=True, text=True
+        )
+        return r.returncode, r.stdout + r.stderr
+
+
 def main() -> int:
     fails = []
 
@@ -52,12 +66,34 @@ def main() -> int:
     if "[R8]" not in out or code == 0:
         fails.append("引用不存在的编号应报 R8 且退出 1")
 
+    # 商业库来源：已回读 + 官方复核未核，必须通过（回读与官方复核分离）
+    body = "# 意见〔自查〕\n\n合同自通知到达对方时解除〔N-01〕。\n"
+    led = {
+        "citations": [
+            {
+                "id": "N-01",
+                "type": "法律",
+                "number": "第五百六十五条",
+                "channel": "commercial",
+                "location": "第 1 页",
+                "read_scope": "excerpt",
+                "quote": "合同自通知到达对方时解除",
+                "reread": "已回读（2026-11-09）",
+                "official_check": "unverified",
+                "effectiveness": "effective",
+            }
+        ]
+    }
+    code, out = run_ledger(body, led)
+    if code != 0 or "[R0] 官方复核未核" not in out:
+        fails.append(f"商业库已回读应通过并提示官方未核，实际退出码 {code}：{out[-200:]}")
+
     if fails:
         for f in fails:
             print("失败：" + f)
         print(f"结果：{len(fails)} 项不通过")
         return 1
-    print("结果：4/4 通过")
+    print(f"结果：{5 - len(fails)}/5 通过")
     return 0
 
 

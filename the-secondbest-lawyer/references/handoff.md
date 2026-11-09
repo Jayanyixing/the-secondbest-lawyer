@@ -24,7 +24,7 @@
 材料目录
 - [E-01] 文件名｜版本｜原件/复印件｜取得来源｜起止页｜可读性
 
-引用底稿摘要
+引用底稿摘要（官方复核未核 N 条，提交前须核清单见下）
 - [N-01] 全称｜条款｜制定机关｜公布/施行｜效力｜定位｜摘录｜读取范围｜回读｜复核状态
 - [C-01] 案名｜案号｜法院｜裁判日期｜审级｜类别｜定位｜摘录｜读取范围｜回读｜复核状态｜生效状态
 
@@ -64,6 +64,7 @@
                  "location": "", "quote": "逐字原文 8-60 字", "reread": "已回读（YYYY-MM-DD）| 未回读",
                  "read_scope": "full|excerpt|abstract|title|none",
                  "official_check": "verified|unverified|na",
+                 "official_check_pending": false,
                  "effectiveness": "effective|unconfirmed|subsequent"}],
   "actions_done": [], "actions_not_done": [],
   "gaps": [], "review": {"scope": "", "reviewer": "", "status": ""}
