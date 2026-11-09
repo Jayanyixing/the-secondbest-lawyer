@@ -39,3 +39,7 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `offline-draft-nomark.md` | `--mode offline` | 1 | R17 | 缺〔草稿〕标注 |
 | `homepage-count-mismatch.md` | 无 | 1 | R19 ×2 | 首页写「共 14 项问题、必改 7 项」，风险表 13 行、必改清单 6 行；数字须由表计数 |
 | `homepage-count-ok.md` | 无 | 0 | — | 首页 13 项（5 高／7 中／1 低）、必改 6 项，与两张表一致 |
+| `clause-ref-missing.md` | 无 | 0（警告） | R20 | 替换条款引用第 7.3 条，原合同与映射表都没有 |
+| `clause-ref-missing.md` | `--strict` | 1 | R20 | 严格模式下引用不存在的编号报错 |
+| `clause-ref-missing.md` | `--strict --contract contract-clause-index.txt` | 0 | — | 原合同目录含 7.3，引用成立 |
+| `clause-map-ok.md` | `--strict` | 0 | — | 附「原编号／新编号／说明」映射表，引用可回溯 |

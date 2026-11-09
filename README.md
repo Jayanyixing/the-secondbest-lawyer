@@ -86,7 +86,7 @@ the-secondbest-lawyer/
 templates/                       文书 JSON 样例、取卡模板与批次、弃卡清单、检索验收题
 tools/
 ├── lawdb.py                     法条库＋结案卡片：导入／检索／按条取文／哈希校验／card-*
-├── citation_lint.py             引用校验器（19 条规则）
+├── citation_lint.py             引用校验器（20 条规则）
 ├── card_health.py               条号错位、跨卡矛盾、占位值、cause↔tags 一致性
 ├── feedback.py / improve.py     失败信号记录与改进提案（只提不改库）
 ├── retrieval_check.py           检索验收回归（data/retrieval-cases.json）
@@ -148,6 +148,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 | R17 | 离线稿形态不合规：缺〔草稿〕／缺「未经联网回读」声明／缺待回读清单／肯定地声称可交付（错误） |
 | R18 | 来源渠道与官方复核矛盾：商业库／转载件却记「已核」（错误） |
 | R19 | 合同审查交付的首页总数、各等级数、必改数与风险表、必改清单行数不符（`--mode self` 报错，其他模式警告） |
+| R20 | 替换条款引用了原合同与映射表中都不存在的条款号（警告；`--strict` 报错） |
 
 没有 shell 的宿主跳过校验器，人工过 [`references/checklist.md`](the-secondbest-lawyer/references/checklist.md)，并在交付里说明未做机器校验。
 
@@ -320,7 +321,7 @@ python3 tools/eval_score.py eval/scores.csv
 ## 自检：改完先跑一遍
 
 ```bash
-python3 tools/test_citation_lint.py   # 引用校验器回归，134/134 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
+python3 tools/test_citation_lint.py   # 引用校验器回归，139/139 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5

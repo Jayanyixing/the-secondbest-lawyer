@@ -322,6 +322,19 @@ def main() -> int:
     _chk(code == 0 and "[R19]" in out, f"非自查模式下 R19 应降为警告，实际 {code}", fails)
     _chk(cl2.RISK_LEVEL_RE.match("**高**。触发：x") is not None, "等级列以 **高** 开头应能解析", fails)
 
+    # R20 替换条款引用的条款号必须能在原合同或映射表里找到
+    code, out = run_fixture("clause-ref-missing.md")
+    _chk(code == 0 and "[R20]" in out, f"普通模式 R20 应为警告，实际 {code}", fails)
+    code, out = run_fixture("clause-ref-missing.md", None, "--strict")
+    _chk(code == 1 and "第 7.3 条" in out, f"严格模式引用不存在编号应报错，实际 {code}", fails)
+    _chk(out.count("[R20]") == 1, f"同报告内已存在的编号不应被误报，实际 {out.count('[R20]')} 条", fails)
+    code, out = run_fixture("clause-map-ok.md", None, "--strict")
+    _chk(code == 0 and "[R20]" not in out, f"有编号映射表应通过，实际 {code}", fails)
+    code, out = run_fixture(
+        "clause-ref-missing.md", None, "--strict", "--contract", str(FIXTURES / "contract-clause-index.txt")
+    )
+    _chk(code == 0 and "[R20]" not in out, f"--contract 提供原合同编号后应通过，实际 {code}", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

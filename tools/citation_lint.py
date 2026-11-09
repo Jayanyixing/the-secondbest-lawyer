@@ -634,12 +634,87 @@ class Report:
             self.warnings.append(entry)
 
 
-def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> Report:
+CLAUSE_REF_RE = re.compile(r"第\s*(\d+(?:\.\d+)*)\s*条")
+DOTTED_NO_RE = re.compile(r"(?<![\d.])(\d+(?:\.\d+)+)(?![\d.])")
+DEFINED_NO_RE = re.compile(r"(?:^|<br\s*/?>)\s*(\d+(?:\.\d+)+)[\u3000\s]")
+
+
+def numbers_in(text: str) -> set[str]:
+    """取出文本里的条款号：第 x.y 条 与裸写的 x.y 都算。"""
+    if not text:
+        return set()
+    return {m.group(1) for m in CLAUSE_REF_RE.finditer(text)} | {
+        m.group(1) for m in DOTTED_NO_RE.finditer(text)
+    }
+
+
+def inside_book_title(text: str, pos: int) -> bool:
+    """条号是否落在《…》里面：那是在引法条，不是引合同条款。"""
+    return text.rfind("《", 0, pos) > text.rfind("》", 0, pos)
+
+
+def check_clause_refs(
+    rep: "Report", tables: list[dict], contract_text: str, strict: bool
+) -> None:
+    """R20：替换条款里的「第 x.y 条」必须能在原合同或映射表里找到。
+
+    只看阿拉伯数字条号：法条用汉字（第五百六十五条），不会落进来；
+    紧跟《…》之后的条号跳过，避免把法条误当合同条款。
+    """
+    risk_tables = [t for t in tables if any("等级" in h for h in t["header"])]
+    if not risk_tables:
+        return
+
+    known: set[str] = set()
+    for t in risk_tables:
+        pos_at = next((i for i, h in enumerate(t["header"]) if "位置" in h), None)
+        for _, cells in t["rows"]:
+            known |= numbers_in(cell_at(cells, pos_at))
+    for t in tables:
+        o = next((i for i, h in enumerate(t["header"]) if "原编号" in h), None)
+        n = next((i for i, h in enumerate(t["header"]) if "新编号" in h), None)
+        if o is None or n is None:
+            continue
+        for _, cells in t["rows"]:
+            known |= numbers_in(cell_at(cells, o)) | numbers_in(cell_at(cells, n))
+    if contract_text:
+        known |= numbers_in(contract_text)
+
+    for t in risk_tables:
+        rep_at = next(
+            (i for i, h in enumerate(t["header"]) if "可替换" in h or "替换条款" in h), None
+        )
+        if rep_at is None:
+            continue
+        for ln, cells in t["rows"]:
+            cell = cell_at(cells, rep_at)
+            if not cell:
+                continue
+            defined = {m.group(1) for m in DEFINED_NO_RE.finditer(cell)}
+            for m in CLAUSE_REF_RE.finditer(cell):
+                if inside_book_title(cell, m.start()):
+                    continue
+                num = m.group(1)
+                if num in known or num in defined:
+                    continue
+                msg = (
+                    f"第 {ln} 行替换条款引用了原合同与映射表中都不存在的编号「第 {num} 条」；"
+                    "补「原编号／新编号／说明」映射表，或改为整条替换"
+                )
+                if strict:
+                    rep.error("R20", msg)
+                else:
+                    rep.warn("R20", msg)
+
+
+def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
+         contract_path: Path | None = None) -> Report:
     rep = Report()
     text = body_path.read_text(encoding="utf-8")
     lines = text.splitlines()
     doc_norm = norm_quote(text)
     tables = parse_tables(lines)
+    contract_text = contract_path.read_text(encoding="utf-8") if contract_path else ""
 
     ledger = load_ledger(ledger_path) if ledger_path else []
     if not ledger:
@@ -762,6 +837,9 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
 
     # R19 首页计数必须与风险表、必改清单对得上
     check_review_counts(rep, lines, tables, mode)
+
+    # R20 替换条款不得引用原合同与映射表中都不存在的编号
+    check_clause_refs(rep, tables, contract_text, strict)
 
     # R9 复核表述与模式
     claims_review = re.search(r"已复核|经复核|独立核验|已通过独立审查", text)
@@ -949,6 +1027,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--ledger", type=Path, help="引用底稿：citations.json 或 markdown 表格")
     ap.add_argument("--mode", choices=["self", "review", "offline"], default="self", help="自查／独立复核／离线草稿模式")
     ap.add_argument("--strict", action="store_true", help="未回读按错误处理")
+    ap.add_argument("--contract", type=Path, help="原合同文件（文本），用于核对替换条款引用的条款号")
     ap.add_argument("--json", action="store_true", help="以 JSON 输出")
     args = ap.parse_args(argv)
 
@@ -958,10 +1037,13 @@ def main(argv: list[str]) -> int:
     if args.ledger and not args.ledger.exists():
         print(f"找不到底稿：{args.ledger}", file=sys.stderr)
         return 2
+    if args.contract and not args.contract.exists():
+        print(f"找不到原合同：{args.contract}", file=sys.stderr)
+        return 2
     if not args.ledger:
         print("提示：未提供 --ledger，只做措辞与标签检查（无法校验案号来源）。", file=sys.stderr)
 
-    rep = lint(args.body, args.ledger, args.mode, args.strict)
+    rep = lint(args.body, args.ledger, args.mode, args.strict, args.contract)
     if args.json:
         print(json.dumps({"errors": rep.errors, "warnings": rep.warnings}, ensure_ascii=False, indent=2))
     else:
