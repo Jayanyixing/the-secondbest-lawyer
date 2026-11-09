@@ -56,6 +56,7 @@ DEADLINE_WORDS = ["截止", "期限", "届满", "上诉期", "答辩期", "举�
 DATE_RE = re.compile(r"\d{4}\s*[-/年]\s*\d{1,2}\s*[-/月]\s*\d{1,2}\s*日?|\d{4}-\d{2}-\d{2}")
 CASE_NO_RE = re.compile(r"[（(]\s*(?:19|20)\d{2}\s*[）)][^\s，。；：、（）()]{2,32}?号")
 GUIDE_NO_RE = re.compile(r"指导案例\s*\d+\s*号|入库编号\s*[\w\-]{4,}")
+REREAD_RE = re.compile(r"已回读[（(](\d{4}-\d{2}-\d{2}|日期待补)[）)]")
 TAG_RE = re.compile(r"[\[〔【]\s*([NCM]-\d{1,3})\s*[\]〕】]|(?<![\w\-])([NCM]-\d{1,3})(?![\w\-])")
 
 
@@ -332,9 +333,15 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
             if entry.get("inline"):
                 pass
             elif entry.get("read_scope") in QUOTE_SCOPES and not in_todo:
-                if not str(entry.get("reread") or "").startswith("已回读"):
+                reread = str(entry.get("reread") or "")
+                if not reread.startswith("已回读"):
                     msg = f"第 {idx} 行引用的 [{tag}] 未回读原文（交付前应回读并记录日期）"
                     rep.error("R15", msg) if strict else rep.warn("R15", msg)
+                elif not REREAD_RE.search(reread):
+                    rep.warn(
+                        "R15",
+                        f"[{tag}] 的回读记录缺日期：写「已回读（YYYY-MM-DD）」，取不到日期写「已回读（日期待补）」",
+                    )
 
         # R5 期限日期必须带状态标签
         if any(w in line for w in DEADLINE_WORDS) and DATE_RE.search(line):

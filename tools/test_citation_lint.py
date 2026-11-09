@@ -88,12 +88,23 @@ def main() -> int:
     if code != 0 or "[R0] 官方复核未核" not in out:
         fails.append(f"商业库已回读应通过并提示官方未核，实际退出码 {code}：{out[-200:]}")
 
+    # 回读日期：只到日，缺日期要提示；「日期待补」算合法写法
+    led2 = {"citations": [dict(led["citations"][0])]}
+    led2["citations"][0]["reread"] = "已回读"
+    code, out = run_ledger(body, led2)
+    if "缺日期" not in out:
+        fails.append("回读缺日期未提示")
+    led2["citations"][0]["reread"] = "已回读（日期待补）"
+    code, out = run_ledger(body, led2)
+    if "缺日期" in out:
+        fails.append("「日期待补」应被接受")
+
     if fails:
         for f in fails:
             print("失败：" + f)
         print(f"结果：{len(fails)} 项不通过")
         return 1
-    print(f"结果：{5 - len(fails)}/5 通过")
+    print(f"结果：{7 - len(fails)}/7 通过")
     return 0
 
 
