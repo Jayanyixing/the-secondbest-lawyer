@@ -1,7 +1,7 @@
 ---
 name: the-secondbest-lawyer
-description: "中国大陆（默认北京）律师实务：民商事诉讼与仲裁、刑事辩护与刑事文书、合同审改与常年顾问、企业信息与法律尽调、财产保全与执行、律所投标；所有法条与案例引用必须可追溯到实际读到的原文。用于需要核验依据、梳理案卷或交付律师业务成果的任务。行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税测算、涉外法意见等属于范围外（见 references/scope.md）。Mainland China legal practice: civil and commercial litigation, criminal defense, contract review, due diligence, enforcement, tenders, with every citation traceable to source text."
-version: 2.37.3
+description: "中国大陆（默认北京）律师实务：民商事诉讼与仲裁、刑事辩护与刑事文书、合同审改与常年顾问、企业信息与法律尽调、财产保全与执行、律所投标；所有法条与案例引用必须可追溯到实际读到的原文。用于需要核验依据、梳理案卷或交付律师业务成果的任务。行政、婚姻家事继承、破产重整、知识产权实体比对、涉税测算、涉外法意见等属于范围外（见 references/scope.md）；劳动人事由 14 模块覆盖，边界见 references/14-labor.md。Mainland China legal practice: civil and commercial litigation, criminal defense, contract review, due diligence, enforcement, tenders, with every citation traceable to source text."
+version: 2.37.4
 author: Jayan
 license: MIT
 platforms: [macos, linux, windows]
@@ -70,7 +70,7 @@ metadata:
 
 查案例时另读[检索接入与降级](references/case-access.md)，优先用本会话已授权的北大法宝或威科先行工具。首次配置或排查读[账号授权](references/case-mcp-setup.md)。
 
-**范围外／擦边**：行政、婚姻家事继承、破产重整、劳动仲裁实体、知识产权实体比对、涉税测算、建设工程造价、医疗损害、海事海商、涉外与港澳台、数据合规与反垄断，先读 [范围外与转介](references/scope.md)，给边界与最小辅助，不出实体结论。
+**范围外／擦边**：行政、婚姻家事继承、破产重整、知识产权实体比对、涉税测算、建设工程造价、医疗损害、海事海商、涉外与港澳台、数据合规与反垄断，先读 [范围外与转介](references/scope.md)，给边界与最小辅助，不出实体结论。**劳动人事不在范围外**，读 [14 劳动人事](references/14-labor.md)。
 
 ## 受理
 
