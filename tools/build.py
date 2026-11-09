@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 import zipfile
 from datetime import date
@@ -77,6 +78,46 @@ def version() -> str:
     text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     m = re.search(r"^version:\s*(\S+)", text, re.M)
     return m.group(1) if m else "0"
+
+
+def check_readme_numbers() -> list[str]:
+    """README 里声明的规则条数与断言条数，必须与代码实际一致。
+
+    这两处数字是最容易悄悄漂移的地方：规则加了没改 README，或改了断言没同步。
+    数字对不上就让构建失败，而不是继续生成一份自相矛盾的分发件。
+    """
+    problems: list[str] = []
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    src = (ROOT / "tools" / "citation_lint.py").read_text(encoding="utf-8")
+    rules = {int(m) for m in re.findall(r'rep\.(?:error|warn)\(\s*"R(\d+)"', src)}
+    rules.discard(0)  # R0 是提示通道，不计入规则条数
+    if not rules:
+        problems.append("citation_lint.py 里找不到任何 R 规则号，无法核对 README")
+        return problems
+    top = max(rules)
+    if rules != set(range(1, top + 1)):
+        problems.append(f"lint 规则号不连续：R1–R{top} 中缺 {sorted(set(range(1, top + 1)) - rules)}")
+    m = re.search(r"引用校验器（(\d+) 条规则）", readme)
+    if not m:
+        problems.append("README 未声明「引用校验器（N 条规则）」")
+    elif int(m.group(1)) != len(rules):
+        problems.append(f"README 声明 {m.group(1)} 条规则，lint 实际 {len(rules)} 条（R1–R{top}）")
+
+    run = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "test_citation_lint.py")],
+        capture_output=True, text=True, cwd=ROOT,
+    )
+    got = re.search(r"结果：(\d+)/(\d+) 条断言通过", run.stdout)
+    if not got:
+        problems.append("test_citation_lint.py 未通过，取不到断言数（先修测试）")
+    else:
+        n = int(got.group(1))
+        m2 = re.search(r"(\d+)/(\d+) 条断言", readme)
+        if not m2:
+            problems.append("README 未声明「N/N 条断言」")
+        elif int(m2.group(1)) != n or int(m2.group(2)) != n:
+            problems.append(f"README 声明 {m2.group(0)}，实测 {n}/{n}")
+    return problems
 
 
 def strip_frontmatter(text: str) -> str:
@@ -164,6 +205,12 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="生成单文件版与技能包")
     ap.add_argument("--out", default="dist", help="输出目录，默认 dist")
     args = ap.parse_args(argv)
+
+    problems = check_readme_numbers()
+    if problems:
+        for p in problems:
+            print(f"构建失败：{p}", file=sys.stderr)
+        return 1
 
     out = (ROOT / args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)

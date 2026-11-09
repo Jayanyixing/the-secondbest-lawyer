@@ -308,6 +308,152 @@ def find_tags(line: str) -> list[str]:
 PLACEHOLDER_RE = re.compile(r"[（(]\s*(?:[XxｘＸ]{2,}|20[XxｘＸ]{2}|\d{2}[XxｘＸ]{2})\s*[）)][^\n]{0,30}?号")
 TODO_SECTION_RE = re.compile(r"待取|线索|待补|待核")
 
+# ---------------------------------------------------------------- 交付物表格解析
+
+HEADING_RE = re.compile(r"^(#{1,6})\s*(.+?)\s*$")
+RISK_LEVEL_RE = re.compile(r"^\**\s*(高|中|低)")
+MUST_FIX_ROW_RE = re.compile(r"^必改\s*\d+")
+
+
+def parse_tables(lines: list[str]) -> list[dict]:
+    """切出 markdown 表格，并记住表格上方最近的标题。
+
+    区分「风险表」「必改表」「底稿表」只能看表头与小节标题，不能看出现顺序：
+    同一份报告里表格顺序会变，靠位置判断必然错。
+    """
+    tables: list[dict] = []
+    heading = ""
+    i, n = 0, len(lines)
+    while i < n:
+        stripped = lines[i].strip()
+        m = HEADING_RE.match(stripped)
+        if m:
+            heading = m.group(2)
+            i += 1
+            continue
+        if not stripped.startswith("|"):
+            i += 1
+            continue
+        block: list[tuple[int, list[str]]] = []
+        while i < n and lines[i].strip().startswith("|"):
+            cells = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+            block.append((i + 1, cells))
+            i += 1
+        header = block[0][1]
+        rows = [
+            (ln, cells)
+            for ln, cells in block[1:]
+            if not all(set(c) <= set("-: ") for c in cells)
+        ]
+        tables.append({"heading": heading, "header": header, "rows": rows})
+    return tables
+
+
+def cell_at(cells: list[str], idx: int | None) -> str:
+    if idx is None or idx < 0 or idx >= len(cells):
+        return ""
+    return cells[idx]
+
+
+# 首页计数声明：写成散文，不写成表格；数字必须能和表行数对上
+TOTAL_RES = [
+    re.compile(r"(?:共|合计|总计)\s*(\d+)\s*项(?:问题|风险|缺陷)"),
+    re.compile(r"(\d+)\s*项(?:问题|风险点|缺陷)"),
+]
+MUST_RES = [
+    re.compile(r"必改\s*(\d+)\s*项"),
+    re.compile(r"(\d+)\s*项必改"),
+]
+LEVEL_RES = [
+    re.compile(r"(\d+)\s*项\s*(?:属|为|系)?\s*(高|中|低)风险"),
+    re.compile(r"(高|中|低)风险\s*(\d+)\s*项"),
+]
+
+
+def first_int(patterns, text: str, group: int = 1) -> int | None:
+    for pat in patterns:
+        m = pat.search(text)
+        if m:
+            return int(m.group(group))
+    return None
+
+
+def homepage_text(lines: list[str], limit: int = 60) -> str:
+    """首页＝文首若干行里的散文；表格行是数据，不参与数字声明。"""
+    return "\n".join(l for l in lines[:limit] if not l.strip().startswith("|"))
+
+
+def check_review_counts(rep: "Report", lines: list[str], tables: list[dict], mode: str) -> None:
+    """R19：合同审查类交付的首页数字必须由风险表与必改表计数得出。
+
+    只对含「等级」列的风险表生效；解析不到首页数字时只提示，不猜。
+    """
+    risk_tables = [t for t in tables if any("等级" in h for h in t["header"])]
+    if not risk_tables:
+        return
+
+    total_rows = 0
+    level_counts = {"高": 0, "中": 0, "低": 0}
+    unparsed: list[int] = []
+    for t in risk_tables:
+        lvl_at = next((i for i, h in enumerate(t["header"]) if "等级" in h), None)
+        total_rows += len(t["rows"])
+        for ln, cells in t["rows"]:
+            m = RISK_LEVEL_RE.match(cell_at(cells, lvl_at))
+            if m:
+                level_counts[m.group(1)] += 1
+            else:
+                unparsed.append(ln)
+    if unparsed:
+        shown = "、".join(str(x) for x in unparsed[:6])
+        rep.warn("R19", f"第 {shown} 行的风险等级无法解析（单元格应以 高／中／低 开头），未计入分级统计")
+
+    must_tables = [
+        t
+        for t in tables
+        if "必改项" in t["heading"]
+        or (t["rows"] and MUST_FIX_ROW_RE.match(cell_at(t["rows"][0][1], 0)))
+    ]
+    must_rows = sum(
+        1 for t in must_tables for _, cells in t["rows"] if MUST_FIX_ROW_RE.match(cell_at(cells, 0))
+    )
+
+    head = homepage_text(lines)
+    total = first_int(TOTAL_RES, head)
+    must = first_int(MUST_RES, head)
+    levels: dict[str, int] = {}
+    for m in LEVEL_RES[0].finditer(head):  # 「5 项属高风险」
+        levels.setdefault(m.group(2), int(m.group(1)))
+    for m in LEVEL_RES[1].finditer(head):  # 「高风险 5 项」
+        levels.setdefault(m.group(1), int(m.group(2)))
+    if not total and not must and not levels:
+        rep.warn(
+            "R19",
+            "有风险表，但首页没解析到问题总数／必改数／分级数，无法核对（建议写成「共 N 项问题，其中高风险 a 项……必改 b 项」）",
+        )
+        return
+
+    def bad(msg: str) -> None:
+        if mode == "self":
+            rep.error("R19", msg)
+        else:
+            rep.warn("R19", msg)
+
+    if total is not None and total != total_rows:
+        bad(f"首页声明共 {total} 项问题，风险表实有 {total_rows} 行；首页数字应由表计数得出，不得手填")
+    for lv, num in sorted(levels.items()):
+        if num != level_counts[lv]:
+            bad(f"首页声明{lv}风险 {num} 项，风险表实有 {level_counts[lv]} 行；首页数字应由表计数得出")
+    if must is not None:
+        if not must_tables:
+            rep.warn(
+                "R19",
+                f"首页声明必改 {must} 项，但未找到必改清单（小节标题含「必改项」，或首列写「必改 N」），无法核对",
+            )
+        elif must != must_rows:
+            bad(f"首页声明必改 {must} 项，必改清单实有 {must_rows} 行；首页数字应由表计数得出")
+
+
 
 def norm(text: str) -> str:
     """案号比较用的归一化：去空白、全角括号转半角、只留字母数字与汉字。"""
@@ -493,6 +639,7 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
     text = body_path.read_text(encoding="utf-8")
     lines = text.splitlines()
     doc_norm = norm_quote(text)
+    tables = parse_tables(lines)
 
     ledger = load_ledger(ledger_path) if ledger_path else []
     if not ledger:
@@ -612,6 +759,9 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         for phrase in VAGUE_CITATIONS:
             if phrase in line:
                 rep.error("R7", f"第 {idx} 行出现无具体依据的引用「{phrase}」")
+
+    # R19 首页计数必须与风险表、必改清单对得上
+    check_review_counts(rep, lines, tables, mode)
 
     # R9 复核表述与模式
     claims_review = re.search(r"已复核|经复核|独立核验|已通过独立审查", text)

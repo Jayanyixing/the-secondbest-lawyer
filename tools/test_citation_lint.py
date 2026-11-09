@@ -312,6 +312,16 @@ def main() -> int:
     code, out = run_fixture("commercial-verified.md", "commercial-verified.json")
     _chk(code == 1 and "[R18]" in out, f"商业库写已核应报 R18 且退出 1，实际 {code}", fails)
 
+    # R19 首页计数：合同审查类交付的首页数字必须由风险表、必改清单计数得出
+    code, out = run_fixture("homepage-count-mismatch.md")
+    _chk(code == 1 and out.count("[R19]") == 2, f"首页数字与表不符应报 2 条 R19，实际 {code}／{out.count('[R19]')}", fails)
+    _chk("共 14 项" in out and "必改 7 项" in out, "R19 文案应带出首页声明值，便于对账", fails)
+    code, out = run_fixture("homepage-count-ok.md")
+    _chk(code == 0 and "[R19]" not in out, f"首页数字与表一致应通过，实际 {code}", fails)
+    code, out = run_fixture("homepage-count-mismatch.md", None, "--mode", "review")
+    _chk(code == 0 and "[R19]" in out, f"非自查模式下 R19 应降为警告，实际 {code}", fails)
+    _chk(cl2.RISK_LEVEL_RE.match("**高**。触发：x") is not None, "等级列以 **高** 开头应能解析", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)
