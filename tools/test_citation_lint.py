@@ -81,6 +81,8 @@ def main() -> int:
                 "reread": "已回读（2026-11-09）",
                 "official_check": "unverified",
                 "effectiveness": "effective",
+                "norm_status": "current",
+                "apply_time": "行为时点 2024-03-01；适用版本 民法典",
             }
         ]
     }
@@ -99,12 +101,27 @@ def main() -> int:
     if "缺日期" in out:
         fails.append("「日期待补」应被接受")
 
+    # R16：效力未确认却用于结论 → 错误；补齐两字段 → 不再提示
+    led3 = {"citations": [dict(led["citations"][0])]}
+    code, out = run_ledger(body, led3)
+    if "R16" in out:
+        fails.append("补了效力与时点仍报 R16")
+    old = {"citations": [{k: v for k, v in led["citations"][0].items()
+                          if k not in ("norm_status", "apply_time")}]}
+    code, out = run_ledger(body, old)
+    if "R16" not in out or code != 0:
+        fails.append("旧底稿缺两字段应只警告、不阻断")
+    led3["citations"][0]["norm_status"] = "unconfirmed"
+    code, out = run_ledger(body, led3)
+    if code == 0 or "规范效力为「未确认」" not in out:
+        fails.append("规范效力未确认用于结论应报错并退出 1")
+
     if fails:
         for f in fails:
             print("失败：" + f)
         print(f"结果：{len(fails)} 项不通过")
         return 1
-    print(f"结果：{7 - len(fails)}/7 通过")
+    print(f"结果：{9 - len(fails)}/9 通过")
     return 0
 
 

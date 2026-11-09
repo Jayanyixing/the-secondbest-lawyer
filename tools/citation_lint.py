@@ -31,6 +31,13 @@ QUOTE_SCOPES = {"full", "excerpt"}
 SCOPE_WORDS = [("全文", "full"), ("节选", "excerpt"), ("摘要", "abstract"), ("标题", "title"), ("未读", "none")]
 CHECK_WORDS = [("已核", "verified"), ("未核", "unverified"), ("不适用", "na")]
 EFFECT_WORDS = [("已确认生效", "effective"), ("未确认", "unconfirmed"), ("存在后续", "subsequent")]
+NORM_STATUS_WORDS = [
+    ("未确认", "unconfirmed"),
+    ("已废止", "repealed"),
+    ("已修改", "amended"),
+    ("未施行", "not_effective"),
+    ("现行有效", "current"),
+]
 
 REQUIRED_FIELDS = ["id", "type", "number", "location", "read_scope", "official_check", "channel"]
 
@@ -144,6 +151,8 @@ def load_ledger_md(path: Path) -> list[dict]:
                 "reread": get("回读"),
                 "official_check": pick(CHECK_WORDS, get("官方复核", "复核"), "unknown"),
                 "effectiveness": pick(EFFECT_WORDS, get("生效", "后续"), "unknown"),
+                "norm_status": pick(NORM_STATUS_WORDS, get("规范效力"), "unknown"),
+                "apply_time": get("适用时点"),
             }
         )
     return entries
@@ -369,6 +378,21 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
     for entry in ledger:
         if entry.get("id") and entry["id"] not in used_ids:
             rep.warn("R10", f"底稿条目 {entry['id']} 未在正文引用（可能多余）")
+
+    # R16 规范类条目缺效力与适用时点；效力未确认却用于结论
+    for entry in ledger:
+        eid = entry.get("id") or ""
+        if entry.get("inline") or not eid.startswith("N"):
+            continue
+        missing = []
+        if entry.get("norm_status") in (None, "", "unknown"):
+            missing.append("规范效力")
+        if not str(entry.get("apply_time") or "").strip():
+            missing.append("适用时点")
+        if missing:
+            rep.warn("R16", f"规范类条目 {eid} 缺字段：{'、'.join(missing)}（旧底稿可先补后交）")
+        elif entry.get("norm_status") == "unconfirmed" and eid in used_ids:
+            rep.error("R16", f"规范类条目 {eid} 的规范效力为「未确认」，却用于正文结论；先核效力或降为待取正文")
 
     # R0 官方复核未核条数（提示级：警告，不阻断交付）
     used_unverified = [

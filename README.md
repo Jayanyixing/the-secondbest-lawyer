@@ -79,7 +79,7 @@ the-secondbest-lawyer/
 templates/                       文书 JSON 样例、取卡模板与批次、弃卡清单、检索验收题
 tools/
 ├── lawdb.py                     法条库＋结案卡片：导入／检索／按条取文／哈希校验／card-*
-├── citation_lint.py             引用校验器（15 条规则）
+├── citation_lint.py             引用校验器（16 条规则）
 ├── card_health.py               条号错位、跨卡矛盾、占位值、cause↔tags 一致性
 ├── feedback.py / improve.py     失败信号记录与改进提案（只提不改库）
 ├── retrieval_check.py           检索验收回归（data/retrieval-cases.json）
@@ -137,6 +137,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 | R13 | 摘录过短或全是套话，无法证伪 |
 | R14 | 同一摘录被不同条目复用 |
 | R15 | 用于结论的条目未回读 |
+| R16 | 规范类条目缺「规范效力」或「适用时点」（警告）；规范效力「未确认」却用于结论（错误） |
 
 没有 shell 的宿主跳过校验器，人工过 [`references/checklist.md`](the-secondbest-lawyer/references/checklist.md)，并在交付里说明未做机器校验。
 
