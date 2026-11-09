@@ -1,7 +1,7 @@
 <!-- 单文件合并版 · 由 tools/build.py 生成，请勿手工编辑 -->
 # the-secondbest-lawyer（完整版）
 
-> 版本 2.38.2 ｜ 生成 2026-11-09 ｜ 无需安装、无需联网、无需外部文件。
+> 版本 2.38.3 ｜ 生成 2026-11-09 ｜ 无需安装、无需联网、无需外部文件。
 > 直接作为系统提示、项目知识或对话开头使用即可。
 > 没有 shell 时跳过 `tools/citation_lint.py`，改用文末「交付前总闸」人工检查。
 > 仓库：<https://github.com/Jayanyixing/the-secondbest-lawyer>
@@ -1878,7 +1878,7 @@ claude mcp add --transport http pkulaw-case-keyword https://apim-gateway.pkulaw.
 事实发生时点｜适用法时点｜检索截止日
 截止时间｜期限类型｜起算凭据（有／无，具体文书）
 授权范围｜允许的外部动作（发送／提交／联系／查询）
-首次确认（a 所内与客户允许 AI 处理／b 模型留存与存放地合规／c 已脱敏或确认可上传）｜保密范围｜禁止跨案使用的信息｜脱敏状态
+隐私与保密（同一案件会话内确认一次）：AI 处理＝已确认/未确认/不适用｜数据留存＝已确认/未确认/不适用｜脱敏＝已确认/未确认/不适用｜确认日期｜保密范围｜禁止跨案使用的信息
 
 已知事实
 - [F-01] 内容｜材料记载/当事人陈述/推断/待查｜来源与页码
@@ -1919,6 +1919,12 @@ claude mcp add --transport http pkulaw-case-keyword https://apim-gateway.pkulaw.
     "evidence_of_start": ""
   },
   "authorization": {"outbound_actions": [], "scope": ""},
+  "privacy_check": {
+    "ai_allowed": "已确认 | 未确认 | 不适用",
+    "retention_ok": "已确认 | 未确认 | 不适用",
+    "deidentified": "已确认 | 未确认 | 不适用",
+    "confirmed_on": "YYYY-MM-DD"
+  },
   "facts": [{"id": "F-01", "text": "", "basis": "record|statement|inference|unknown", "source": ""}],
   "materials": [{"id": "E-01", "file": "", "version": "", "pages": "", "readability": ""}],
   "citations": [{"id": "C-01", "type": "", "number": "", "court": "", "date": "", "level": "",
@@ -1938,6 +1944,7 @@ claude mcp add --transport http pkulaw-case-keyword https://apim-gateway.pkulaw.
 ### 规则
 
 - 依据附全称／案号、机关或法院、日期、效力或生效状态；案例另附审级与事实差异。
+- `privacy_check` 三项取值只有「已确认／未确认／不适用」；缺 key、空值或写成别的词，一律按「未确认」处理——此时只做不含案件材料的任务，不接收整卷。
 - 敏感个人信息不因模板留有字段就默认全收集。
 - 交接后的新材料与实质修改形成新版本，写明改变了哪些事实、引用、金额、期限与结论；旧版复核不自动套用到新版。
 
