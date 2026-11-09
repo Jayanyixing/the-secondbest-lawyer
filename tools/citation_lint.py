@@ -422,6 +422,17 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         if entry.get("norm_status") == NORM_UNCONFIRMED and eid in used_ids:
             rep.error("R16", f"规范类条目 {eid} 的规范效力为「未确认」，却用于正文结论；先核效力或降为待取正文")
 
+    # R18 来源渠道与官方复核矛盾：商业库/转载件不得记「已核」
+    for entry in ledger:
+        eid = entry.get("id") or ""
+        if not eid:
+            continue
+        if entry.get("channel") == "commercial" and entry.get("official_check") == "verified":
+            rep.error(
+                "R18",
+                f"条目 {eid} 来源为商业库，却把官方复核写成「已核」；商业库只能记「未核（仅商业库或转载）」",
+            )
+
     # R0 官方复核未核条数（提示级：警告，不阻断交付）
     used_unverified = [
         e["id"]
