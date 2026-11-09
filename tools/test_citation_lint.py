@@ -343,6 +343,12 @@ def main() -> int:
     code, out = run_fixture("conclusion-unsourced.md", None, "--strict")
     _chk(code == 0 and "[R21]" in out, f"严格模式下 R21 仍只是警告，实际 {code}", fails)
 
+    # 词表：案卷材料缺口写「待补材料」，与「待取正文」分开，且不算词表外写法
+    code, out = run_fixture("pending-material.md")
+    _chk(code == 0, f"带「待补材料」的交付应通过，实际 {code}", fails)
+    _chk("不在词表内" not in out, "「待补材料」不得被判为词表外写法", fails)
+    _chk("待补材料" in (FIXTURES / "pending-material.md").read_text(encoding="utf-8"), "样例应保留「待补材料」写法", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

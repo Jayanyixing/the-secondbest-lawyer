@@ -44,3 +44,4 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `clause-ref-missing.md` | `--strict --contract contract-clause-index.txt` | 0 | — | 原合同目录含 7.3，引用成立 |
 | `clause-map-ok.md` | `--strict` | 0 | — | 附「原编号／新编号／说明」映射表，引用可回溯 |
 | `conclusion-unsourced.md` | 无 | 0（警告） | R21 | 风险表「不发生效力」无编号→提示；有编号、「」内原文、写了「法律判断待核」的行不提示 |
+| `pending-material.md` | 无 | 0（警告） | — | 材料目录写「待补材料」并列 E- 编号，不得判为词表外写法；「待取正文」另表 |
