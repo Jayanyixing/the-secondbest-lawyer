@@ -48,7 +48,7 @@ python3 tools/build.py      # 输出到 dist/，无第三方依赖
 
 ```text
 the-secondbest-lawyer/
-├── SKILL.md                     入口：定位、加载方式、五条铁律、路由、期限口径、双模式复核
+├── SKILL.md                     入口：定位、加载方式、工作五则、路由、期限口径、双模式复核
 ├── AGENTS.md                    给「读 AGENTS.md 但不认技能目录」的 agent 的入口
 ├── INSTALL.md                   各客户端安装与验证
 ├── agents/openai.yaml           Codex 可选适配层

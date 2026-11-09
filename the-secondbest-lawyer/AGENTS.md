@@ -4,8 +4,8 @@
 
 ## 加载顺序
 
-1. 先读本目录的 `SKILL.md`（入口：定位、五条铁律、路由表、期限口径、交付限制）。
-2. 按用户任务，从 `references/` 只加载对应模块，一次不超过 3 个：
+1. 先读本目录的 `SKILL.md`（入口：定位、工作五则、路由表、期限口径、交付限制）。
+2. 按用户任务，从 `references/` 只加载对应模块：主模块 1 个 + 补充模块最多 2 个（`citation.md` 常驻，不占额度）：
    - 检索与引用：`01-legal-research.md` + `citation.md`
    - 民商诉讼：`02-civil-litigation.md`
    - 刑事：`03-criminal-defense.md`
@@ -16,7 +16,7 @@
    - 投标：`08-law-firm-tender.md`
    - 期限与联络：`09-case-operations.md`
    - 复核：`10-legal-quality.md`
-   - 范围外：`scope.md`（命中行政、婚家、破产、劳动仲裁实体、知产实体、涉税、涉外等先读它）
+   - 范围外：`scope.md`（命中行政、婚家、破产、知产实体、涉税、涉外等先读它；劳动人事已由 14 模块覆盖，边界见 `14-labor.md`）
 3. 交付前读 `references/checklist.md`，有条件时跑 `python3 tools/citation_lint.py`。
 
 ## 无论哪个宿主都必须遵守的三条
