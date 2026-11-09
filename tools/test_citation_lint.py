@@ -229,6 +229,11 @@ def main() -> int:
     _chk(code == 0 and "[R18]" not in out, f"北京法院网导出件三段式应通过，实际 {code}", fails)
     code, out = run_fixture("export-from-commercial.md", "export-from-commercial.json")
     _chk(code == 1 and "[R18]" in out, f"商业库导出件写已核仍应报 R18，实际 {code}", fails)
+    code, out = run_fixture("official-root-only.md", "official-root-only.json")
+    _chk(code == 1 and out.count("[R2]") == 3, f"官方链接只有主机名/根路径应按 R2 报 3 条，实际 {code}／{out.count('[R2]')} 条", fails)
+    _chk("[R18]" not in out, "根路径链接不应落进 R18（域名本身合规）", fails)
+    code, out = run_fixture("pending-original.md", "pending-original.json")
+    _chk(code == 0 and "[R18]" not in out, f"待取正文样例应可通过（仅警告），实际 {code}", fails)
 
     # 渠道写「官方」但出处域名不在白名单 → R18；用户导出件不受域名约束
     _chk(cl2.official_domain_ok("flk.npc.gov.cn") , "官方域名应通过", fails)

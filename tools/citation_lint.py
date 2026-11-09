@@ -693,6 +693,14 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
                     "用户导出件请把渠道写成「导出」并在出处写明官方链接",
                 )
                 continue
+            if not any(pth and pth not in ("", "/") for _, pth in sites_in(source)):
+                rep.error(
+                    "R2",
+                    f"条目 {eid} 出处只有官方站点的主机名或根路径"
+                    f"（{entry.get('location') or ''}），没有具体原文路径；"
+                    "引用须写能定位到原文的完整链接",
+                )
+                continue
         if channel != "official" and not check_allowed_for_channel(
             entry.get("official_check_raw"), channel, source
         ):
