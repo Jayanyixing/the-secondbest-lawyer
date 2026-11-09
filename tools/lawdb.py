@@ -39,7 +39,15 @@ CN_DIGITS = {"零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 
              "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
 CN_UNITS = {"十": 10, "百": 100, "千": 1000}
 
-ARTICLE_RE = re.compile(r"^\s*第([零〇一二三四五六七八九十百千两\d]{1,8})条[\s\u3000　]*(.*)$", re.M)
+ARTICLE_RE = re.compile(
+    r"^\s*第([零〇一二三四五六七八九十百千两\d]{1,8})条(?:之([零〇一二三四五六七八九十百千两\d]{1,4}))?"
+    # 跨行引用「第五十条」「第三十八条第一款」不带空格才排除：
+    # 「第九十九条 和解协议…」这类正文本身就以「和/的/规定」开头的真条文必须放过
+    r"(?!\s*(?:[、，,。；：）》]|第[零〇一二三四五六七八九十百千两\d]+[款项]))"
+    r"(?!(?:规定|的|所称|所述|和|及|或|至))"
+    r"[\s\u3000　]*(.*)$",
+    re.M,
+)
 HEADING_RE = re.compile(r"^\s*(第[零〇一二三四五六七八九十百千两\d]{1,6}[编章节])\s*(.*)$", re.M)
 
 
@@ -77,8 +85,9 @@ def docx_to_text(path: Path) -> str:
     """不用 python-docx：docx 就是 zip + XML，直接抽 <w:t>。"""
     with zipfile.ZipFile(path) as zf:
         xml = zf.read("word/document.xml").decode("utf-8", errors="ignore")
-    xml = xml.replace("</w:p>", "\n")
-    parts = re.findall(r"<w:t[^>]*>(.*?)</w:t>|(\n)", xml, flags=re.S)
+    xml = xml.replace("\r", "").replace("\n", "")
+    xml = re.sub(r"</w:p>|<w:(?:br|cr)\b[^>]*/?>", "\n", xml)
+    parts = re.findall(r"<w:t(?:\s[^>]*)?>(.*?)</w:t>|(\n)", xml)
     out = "".join(a or b for a, b in parts)
     return out.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
 
@@ -190,11 +199,12 @@ def parse_articles(text: str) -> list[dict]:
         if m:
             if current:
                 articles.append(current)
+            sub_no = f"之{m.group(2)}" if m.group(2) else ""
             current = {
-                "article_no": f"第{m.group(1)}条",
+                "article_no": f"第{m.group(1)}条{sub_no}",
                 "sort": cn2int(m.group(1)),
                 "heading": hd or "",
-                "text": m.group(2).strip(),
+                "text": m.group(3).strip(),
             }
         elif current:
             current["text"] += "\n" + ln
@@ -435,6 +445,7 @@ def resolve_laws(conn, hint: str) -> list[str]:
 
     if not hint:
         return []
+    has_sub_suffix = bool(re.search(r"(解释|规定|条例|办法|规则|纪要|意见|批复)$", hint))
     rows = q("SELECT name FROM laws WHERE name LIKE ?", f"%{hint}%")
     if rows:
         return rows
@@ -446,6 +457,13 @@ def resolve_laws(conn, hint: str) -> list[str]:
 
     m = re.search(r"[（(]([一二三四五六七八九十]+)[）)]", hint)
     bracket = m.group(1) if m else ""
+    if not has_sub_suffix and not bracket:
+        rows = (
+            q("SELECT name FROM laws WHERE name LIKE ? AND name NOT LIKE '%解释%' AND name NOT LIKE '%规定%'", f"%{hint}%")
+            or q("SELECT name FROM laws WHERE name LIKE ?", f"%{hint}%")
+        )
+        if rows:
+            return rows
     stem = re.sub(r"[（(][一二三四五六七八九十]+[）)]", "", hint)
     stem = re.sub(r"(解释|规定|条例|办法|规则)$", "", stem).strip() or stem
 
@@ -454,7 +472,7 @@ def resolve_laws(conn, hint: str) -> list[str]:
     if bracket:
         sql += " AND (name LIKE ? OR name LIKE ?)"
         params += [f"%（{bracket}）%", f"%({bracket})%"]
-    if stem.endswith("法") and not bracket:
+    if has_sub_suffix and stem.endswith("法") and not bracket:
         sql += " AND name LIKE ?"
         params.append("%解释%")
     rows = q(sql, *params)
@@ -694,7 +712,7 @@ def cmd_card_query(args) -> int:
     groups = [expand(w, syn) for w in words]
     match_expr = " AND ".join("(" + " OR ".join(f'"{x}"' for x in g) + ")" for g in groups if g)
     try:
-        if any(too_short(w) for w in words):
+        if any(too_short(x) for g in groups for x in g):
             raise sqlite3.OperationalError("short")
         rows = conn.execute(
             """SELECT c.case_no,c.cause,c.issues,c.holding,c.key_point,c.quote,c.source,c.created_at,c.verify_status,c.kind
