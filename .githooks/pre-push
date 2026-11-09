@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+# 快速门禁：核心测试 + 边界探针 + 12 案评测 + 敏感文件扫描。
+# 试构建与数据校验留给 CI / 发版前的手工全量门禁。
+exec python3 tools/check_all.py --fast

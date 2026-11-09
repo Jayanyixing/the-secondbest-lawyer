@@ -69,7 +69,7 @@
 
 ## 归档与结案
 
-卷宗目录（按所内规范）＋结案报告（见 [11](11-client-practice.md)）＋退费与票据＋复盘要点入卡片库（见 `tools/lawdb.py card`）。
+卷宗目录（按所内规范）＋结案报告（见 [11](11-client-practice.md)）＋退费与票据＋复盘要点入卡片库（见 `tools/lawdb.py card-add`）。
 
 ## 紧急模式（材料少、时间紧时）
 

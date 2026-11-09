@@ -1,5 +1,13 @@
 # 变更记录
 
+## 2026-11-09（v2.39.29）一键门禁 check_all + GitHub Actions + pre-push
+
+- 新增 `tools/check_all.py`：零依赖全量门禁，按序跑核心四测、`tests/test_*.py` 探针、12 案判别力、`lawdb.py verify`、`retrieval_check.py`，再用临时目录试构建并扫描分发包与 `git ls-files`；发现 `cards.full`、WAL/SHM/journal 或未脱敏案号即退出 1。`--fast` 跳过试构建与数据校验，约 2.5 秒，供 pre-push 使用。
+- 新增 `.github/workflows/ci.yml`：push main 与 PR 在 Ubuntu / Python 3.11 上装 poppler-utils，跑 `check_all.py` 与 `git diff --check`，不依赖工作区日期。
+- 新增 `.githooks/pre-push` 与 `tools/install_hooks.sh`：`bash tools/install_hooks.sh` 后 `git config core.hooksPath .githooks`，push 前自动跑 `check_all.py --fast`。
+- references 口径校正：`13-procedure-actions.md` 的 `lawdb.py card` 改 `card-add`；`data-supply.md` 补卡片库公开/本地边界；`08a-legal-service-bid.md` 与 `08-law-firm-tender.md` 补基准价去极值与「每偏离 1% 扣 k 分」；`citation.md` R17 补顿号另起肯定的判定。
+- 回归：`check_all.py` 全量 13/13、fast 10/10；临时 zip 7,807,890 字节、敏感条目 0；既有 8 套测试与 12 案评测保持全绿。
+
 ## 2026-11-09（v2.39.28）投标四件套与 eval_cases 的 27 处边界修复
 
 - **tender_matrix.py**：中文序号 `ID_RE` 补第 3 捕获组，修「一、投标人必须…」的 `IndexError`；`--min-score` 真正传入覆盖判定；保留含 ★／实质性禁令的短条款；缺文件、坏 docx 跳过并提示；文本 UTF-8→GB18030 回退；JSON 增加 `rows_total`／`rows_truncated`，不再静默截断。

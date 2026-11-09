@@ -43,6 +43,8 @@
 
 把官方件放进来同名覆盖即可升级为“已核”，见 `data/README.md`。
 
+**卡片库的公开/本地边界**：`data/cards.sqlite`（95 张脱敏卡）与 `data/cards.json` 随包公开；含姓名的全量库 `data/cards.full.sqlite` 只留在本地，已被 `.gitignore` 与 `tools/build.py` 排除，绝不进分发包。打包后由 `tools/check_all.py` 再扫一遍，出现 `cards.full`、WAL/SHM/journal 或未脱敏案号即失败。
+
 ### 怎么导入
 
 ```bash

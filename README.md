@@ -97,6 +97,8 @@ tools/
 ├── ocr_pdf.js                   扫描件 OCR（macOS Vision，约 1–2 秒/页）
 ├── docgen.py                    直出 docx（起诉状／证据目录／风险告知书，零依赖）
 ├── build.py                     生成单文件版与技能包
+├── check_all.py                 一键门禁：单测／探针／评测／哈希／构建／防泄露
+├── install_hooks.sh             启用 .githooks/pre-push 本地快检
 ├── eval_score.py                评测分数汇总
 ├── eval_cases.py                基准集跑分（eval/cases，金标＋反例判别力自检）
 ├── review_due.py                复查到期检查
@@ -352,6 +354,8 @@ python3 tools/eval_cases.py --case E03 --answer 某份产出.md   # 判一份真
 ## 自检：改完先跑一遍
 
 ```bash
+python3 tools/check_all.py           # 一键全量门禁，13 项全绿（CI 跑这个）
+python3 tools/check_all.py --fast    # 快速门禁，10 项；pre-push 钩子用
 python3 tools/test_citation_lint.py   # 引用校验器回归，160/160 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
@@ -363,6 +367,8 @@ python3 tools/eval_cases.py           # 基准集判别力，12/12（金标过�
 python3 tools/card_health.py          # 条号错位、跨卡矛盾、占位值、cause↔tags 一致性
 python3 tools/lawdb.py verify         # 法条文件哈希，84/84
 ```
+
+`check_all.py` 是全量入口：核心四测、`tests/test_*.py` 探针、12 案判别力、法条哈希、检索回归、临时试构建，以及分发包与受跟踪文件的敏感条目扫描。`--fast` 跳过试构建与数据校验，供 `git push` 前使用。首次克隆后运行 `bash tools/install_hooks.sh` 启用 pre-push 快检；GitHub Actions 在 push main / PR 时跑全量门禁（`.github/workflows/ci.yml`）。
 
 测试计数口径：一条断言＝一次 `_chk()` 调用（同一断言换个 fixture 再跑算另一条），所以数字会随样例增加而涨；`test_citation_lint.py` 的输出末尾会打印断言总数，与本节数字一致。
 
