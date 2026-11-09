@@ -182,6 +182,18 @@ def main() -> int:
     _chk(code == 1 and "[R17]" in out, f"「未经联网回读，但引用均已核实」应报 R17，实际 {code}", fails)
     _chk("已核实" in out, "R17 未指出被肯定的「已核实」", fails)
 
+    # normalize_norm_status 单元（对应 78bb91a 引入的归一逻辑）
+    import citation_lint as cl2
+
+    _chk(cl2.normalize_norm_status(None) == "unknown", "空值应为 unknown", fails)
+    _chk(cl2.normalize_norm_status("") == "unknown", "空串应为 unknown", fails)
+    for zh, en in [("现行有效", "current"), ("已修改", "amended"), ("已废止", "repealed"),
+                   ("未施行", "not_effective"), ("未确认", "unconfirmed")]:
+        _chk(cl2.normalize_norm_status(zh) == en, f"词表内「{zh}」应归为 {en}", fails)
+    _chk(cl2.normalize_norm_status("有效") == "unconfirmed", "词表外「有效」应按未确认", fails)
+    for en in ("current", "amended", "repealed", "not_effective", "unconfirmed", "unknown"):
+        _chk(cl2.normalize_norm_status(en) == en, f"英文值 {en} 应原样保留", fails)
+
     # 对抗样例：每种写法都要被拦住（详见 tests/fixtures/EXPECTATIONS.md）
     code, out = run_fixture("commercial-verified-variants.md", "commercial-verified-variants.json")
     _chk(code == 1 and out.count("[R18]") == 3, f"三种「已核」变体应各报 R18，实际 {out.count('[R18]')}", fails)

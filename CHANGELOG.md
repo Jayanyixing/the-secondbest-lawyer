@@ -1,5 +1,9 @@
 # 变更记录
 
+## 2026-11-09（v2.38.9）normalize_norm_status 单测
+
+- 对 `78bb91a` 引入的 `normalize_norm_status()` 补单测：空值／空串 → `unknown`；词表内五值（现行有效／已修改／已废止／未施行／未确认）各自归到对应英文值；词表外「有效」→ `unconfirmed`；六个英文值原样保留。
+
 ## 2026-11-09（v2.38.8）对抗样例与未来日期检查
 
 - 修 JSON 底稿的枚举未归一问题：`official_check` 写「已核（与官方原文一致）」「已核实」「官方已核」时，R18 原先认不出（只认 `verified`）。新增 `normalize_enum()`，对 `official_check`／`channel`／`read_scope`／`effectiveness` 同时接受中文与英文写法。

@@ -1,7 +1,7 @@
 <!-- 单文件合并版 · 由 tools/build.py 生成，请勿手工编辑 -->
 # the-secondbest-lawyer（完整版）
 
-> 版本 2.38.8 ｜ 生成 2026-11-09 ｜ 无需安装、无需联网、无需外部文件。
+> 版本 2.38.9 ｜ 生成 2026-11-09 ｜ 无需安装、无需联网、无需外部文件。
 > 直接作为系统提示、项目知识或对话开头使用即可。
 > 没有 shell 时跳过 `tools/citation_lint.py`，改用文末「交付前总闸」人工检查。
 > 仓库：<https://github.com/Jayanyixing/the-secondbest-lawyer>
