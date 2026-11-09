@@ -144,7 +144,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 | R13 | 摘录过短或全是套话，无法证伪 |
 | R14 | 同一摘录被不同条目复用 |
 | R15 | 用于结论的条目未回读 |
-| R16 | 规范类条目缺「规范效力」或「适用时点」（警告）；规范效力「未确认」却用于结论（错误） |
+| R16 | 规范类条目缺「规范效力」或「适用时点」（警告）；规范效力「未确认」却用于结论（错误）——两条独立判定，缺字段不屏蔽错误 |
 
 没有 shell 的宿主跳过校验器，人工过 [`references/checklist.md`](the-secondbest-lawyer/references/checklist.md)，并在交付里说明未做机器校验。
 

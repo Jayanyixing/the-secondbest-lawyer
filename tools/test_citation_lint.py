@@ -8,6 +8,7 @@ import sys
 import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 LINT = HERE / "citation_lint.py"
 
 BODY_TMPL = """# 意见书
@@ -46,6 +47,18 @@ def run_file(path, *extra: str) -> tuple[int, str]:
     r = subprocess.run(
         [sys.executable, str(LINT), str(path), *extra], capture_output=True, text=True
     )
+    return r.returncode, r.stdout + r.stderr
+
+
+FIXTURES = HERE.parent / "tests" / "fixtures"
+
+
+def run_fixture(name: str, ledger: str | None = None) -> tuple[int, str]:
+    doc = FIXTURES / name
+    args = [sys.executable, str(LINT), str(doc)]
+    if ledger:
+        args += ["--ledger", str(FIXTURES / ledger)]
+    r = subprocess.run(args, capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr
 
 

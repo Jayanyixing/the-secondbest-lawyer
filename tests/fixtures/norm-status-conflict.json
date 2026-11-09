@@ -1,0 +1,32 @@
+{
+  "citations": [
+    {
+      "id": "N-01",
+      "type": "法律",
+      "number": "《劳动合同法》第三十八条",
+      "name": "中华人民共和国劳动合同法",
+      "channel": "official",
+      "location": "第 1 页",
+      "read_scope": "excerpt",
+      "quote": "未依法为劳动者缴纳社会保险费的",
+      "reread": "已回读（2026-11-09）",
+      "official_check": "verified",
+      "norm_status": "未确认",
+      "apply_time": ""
+    },
+    {
+      "id": "N-02",
+      "type": "法律",
+      "number": "《劳动合同法》第四十六条",
+      "name": "中华人民共和国劳动合同法",
+      "channel": "official",
+      "location": "第 1 页",
+      "read_scope": "excerpt",
+      "quote": "劳动者依照本法第三十八条规定解除劳动合同的",
+      "reread": "已回读（2026-11-09）",
+      "official_check": "verified",
+      "norm_status": "已废止",
+      "apply_time": ""
+    }
+  ]
+}

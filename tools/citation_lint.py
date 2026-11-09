@@ -41,6 +41,29 @@ NORM_STATUS_WORDS = [
 
 REQUIRED_FIELDS = ["id", "type", "number", "location", "read_scope", "official_check", "channel"]
 
+NORM_UNCONFIRMED = "unconfirmed"
+
+
+def normalize_norm_status(raw):
+    """规范效力统一取值：没填 → unknown；填了但不在词表 → unconfirmed（按「未确认」处理）。
+
+    两个值语义不同，不要合并：unknown 表示「这一栏没登记」，unconfirmed 表示
+    「登记了，结论就是没确认」。前者只触发缺字段警告，后者用于结论时是错误。
+    """
+    if raw is None or not str(raw).strip():
+        return "unknown"
+    if raw in ("unknown", "current", "unconfirmed", "repealed", "amended", "not_effective"):
+        return str(raw)
+    return pick(NORM_STATUS_WORDS, raw, NORM_UNCONFIRMED)
+
+
+def normalize_entries(entries: list[dict]) -> list[dict]:
+    """统一各来源（JSON / markdown 表格 / 内联）的规范效力取值。"""
+    for e in entries:
+        if e.get("norm_status") not in (None, ""):
+            e["norm_status"] = normalize_norm_status(e["norm_status"])
+    return entries
+
 BOILERPLATE_QUOTES = [
     "本院认为",
     "依照法律规定",
@@ -151,7 +174,7 @@ def load_ledger_md(path: Path) -> list[dict]:
                 "reread": get("回读"),
                 "official_check": pick(CHECK_WORDS, get("官方复核", "复核"), "unknown"),
                 "effectiveness": pick(EFFECT_WORDS, get("生效", "后续"), "unknown"),
-                "norm_status": pick(NORM_STATUS_WORDS, get("规范效力"), "unknown"),
+                "norm_status": normalize_norm_status(get("规范效力")),
                 "apply_time": get("适用时点"),
             }
         )
@@ -269,6 +292,7 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
             rep.warn("R0", f"未指定 --ledger，已从文书内表格读到底稿 {len(ledger)} 条（字段不全，只做编号与摘录检查）")
     by_id = {e["id"]: e for e in ledger if e.get("id")}
     known_numbers = {norm(e["number"]) for e in ledger if e.get("number")}
+    ledger = normalize_entries(ledger)
     used_ids: dict[str, list[int]] = {}
 
     # R2 底稿字段完整性
@@ -394,7 +418,8 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
             missing.append("适用时点")
         if missing:
             rep.warn("R16", f"规范类条目 {eid} 缺字段：{'、'.join(missing)}（旧底稿可先补后交）")
-        elif entry.get("norm_status") == "unconfirmed" and eid in used_ids:
+        # 与上一条独立判断：字段缺失不得屏蔽「未确认却用于结论」
+        if entry.get("norm_status") == NORM_UNCONFIRMED and eid in used_ids:
             rep.error("R16", f"规范类条目 {eid} 的规范效力为「未确认」，却用于正文结论；先核效力或降为待取正文")
 
     # R0 官方复核未核条数（提示级：警告，不阻断交付）

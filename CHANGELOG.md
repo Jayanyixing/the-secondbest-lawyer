@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-11-09（v2.37.8）R16 两条分支互不屏蔽
+
+- 原实现 `if missing: warn … elif norm_status == "unconfirmed": error`，字段缺失时错误分支被完全屏蔽。改为两个独立 `if`。
+- 新增 `normalize_norm_status()`：空值 → `unknown`（只触发缺字段警告）；有值但不在词表 → `unconfirmed`（按「未确认」处理）；已归一化的英文值原样保留。`normalize_entries()` 同时作用于 JSON、markdown 表格与内联底稿。
+- 新增 `tests/fixtures/norm-status-conflict.md/.json`：N-01 效力「未确认」+ 适用时点空 + 已用于结论 → 报错并警告；N-02「已废止」+ 适用时点空 → 只警告。
+
 ## 2026-11-09（v2.37.7）验收场景规则区间补到 R16
 
 `acceptance-scenarios.md` 场景 29 仍写 `R1–R15`，R16 上线后区间过时；改为 `R1–R16`。
