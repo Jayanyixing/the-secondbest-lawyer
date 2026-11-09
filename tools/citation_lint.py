@@ -439,6 +439,26 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         if entry.get("norm_status") == NORM_UNCONFIRMED and eid in used_ids:
             rep.error("R16", f"规范类条目 {eid} 的规范效力为「未确认」，却用于正文结论；先核效力或降为待取正文")
 
+    # R16 内联底稿：有 N- 编号但没登记规范效力 → 一条汇总，不逐条刷屏
+    inline_missing = [
+        e.get("id") or ""
+        for e in ledger
+        if e.get("inline")
+        and (e.get("id") or "").startswith("N")
+        and e.get("norm_status") in (None, "", "unknown")
+    ]
+    if inline_missing:
+        shown = "、".join(inline_missing[:10])
+        more = "…" if len(inline_missing) > 10 else ""
+        msg = (
+            f"内联底稿有 {len(inline_missing)} 条规范类条目未登记「规范效力」：{shown}{more}；"
+            "内联表加一列「规范效力」即可，不必逐条补"
+        )
+        if strict:
+            rep.warn("R16", msg)
+        else:
+            rep.warn("R0", msg)
+
     # R18 来源渠道与官方复核矛盾：商业库/转载件不得记「已核」
     for entry in ledger:
         eid = entry.get("id") or ""
