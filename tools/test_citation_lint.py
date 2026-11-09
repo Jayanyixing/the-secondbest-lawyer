@@ -381,6 +381,14 @@ def main() -> int:
     code, out = run_fixture("homepage-conditional-wording.md")
     _chk(code == 0 and "[R19]" not in out, f"条件式计数的插入语被误读，实际 {code}：{out[:160]}", fails)
 
+    # R5：只盯计算得出的死线；合同条款的期间起止与引号内原文不查
+    code, out = run_fixture("deadline-duration.md")
+    _chk(code == 0 and "[R5]" not in out, f"合同期间起止不应报 R5，实际 {code}：{out[:160]}", fails)
+    code, out = run("# 意见〔自查〕\n\n上诉期届满日为 2026-12-20，逾期丧失上诉权。\n")
+    _chk(code == 1 and "[R5]" in out, f"计算得出的上诉期日期缺标签应报 R5，实际 {code}", fails)
+    code, out = run("# 意见〔自查〕\n\n上诉期届满日为 2026-12-20〔已核：送达日 2026-12-05〕，逾期丧失上诉权。\n")
+    _chk(code == 0 and "[R5]" not in out, f"带状态标签的上诉期日期应通过，实际 {code}", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

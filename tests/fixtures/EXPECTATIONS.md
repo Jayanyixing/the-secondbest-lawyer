@@ -51,3 +51,4 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `trial-blind-review.md` | 无 | 1 | R19 ×3（另 R20／R21 为警告） | 一次试跑的写法合集：首页手填数字、替换条款引用不存在的 7.3、结论无编号、条件式风险 |
 | `source-url-official.md/.json` | `--ledger …` | 0 | — | 出处写在 `source_url` 字段，R18 应认得，不得报「渠道官方却无链接」 |
 | `homepage-conditional-wording.md` | 无 | 0 | — | 首页「中风险 2 项（含 2 项条件式）」＋「条件式（待补材料）2 项」，不得把后面的「低风险 3 项」读成条件式数 |
+| `deadline-duration.md` | 无 | 0 | — | 修订稿里的期间起止（2026-12-01 至 2028-11-30）不是期限断言，不得报 R5 |

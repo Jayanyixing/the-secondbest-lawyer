@@ -136,7 +136,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 | R2 | 底稿缺来源、定位、读取范围或复核状态 |
 | R3 | 摘要／标题级材料被用来支撑正文 |
 | R4 | 把未确认生效的裁判写成生效判决 |
-| R5 | 期限日期没有 `已核`／`〔假设〕`／`待核` 标签 |
+| R5 | 计算得出的期限日期（截止／届满／到期／上诉期等）没有 `已核`／`〔假设〕`／`待核` 标签；合同条款的期间起止、引号内原文不查 |
 | R6 | 绝对化结论（无任何风险、肯定胜诉等） |
 | R7 | 无具体依据的引用（根据相关规定、某法院认为等） |
 | R8 | 引用了不存在的底稿编号 |
@@ -325,7 +325,7 @@ python3 tools/eval_score.py eval/scores.csv
 ## 自检：改完先跑一遍
 
 ```bash
-python3 tools/test_citation_lint.py   # 引用校验器回归，157/157 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
+python3 tools/test_citation_lint.py   # 引用校验器回归，160/160 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5
