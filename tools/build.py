@@ -80,6 +80,14 @@ def version() -> str:
     return m.group(1) if m else "0"
 
 
+def _rel(path: Path) -> str:
+    """仓库内显示相对路径；--out 指向仓库外时退回绝对路径，避免 ValueError。"""
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def check_readme_numbers() -> list[str]:
     """README 里声明的规则条数与断言条数，必须与代码实际一致。
 
@@ -213,6 +221,17 @@ def build_zip(out: Path) -> Path:
             "4) 只能粘贴文本：用 dist/the-secondbest-lawyer-lite.md。\n"
             "详见 the-secondbest-lawyer/INSTALL.md。\n",
         )
+
+    # 构建层自检：分发包里出现未脱敏卡片或 SQLite 事务文件，宁可不出包
+    with zipfile.ZipFile(target) as zf:
+        names = zf.namelist()
+    leaked = [
+        n for n in names
+        if "cards.full" in n or re.search(r"-(?:wal|shm|journal)$", n)
+    ]
+    if leaked:
+        target.unlink(missing_ok=True)
+        raise RuntimeError(f"分发包自检失败，已删除 {target.name}：{leaked[:5]}")
     return target
 
 
@@ -246,10 +265,10 @@ def main(argv: list[str]) -> int:
     for order, variant, path in targets:
         text = build_flat(order, variant)
         path.write_text(text, encoding="utf-8")
-        print(f"{path.relative_to(ROOT)}  {len(text):,} 字")
+        print(f"{_rel(path)}  {len(text):,} 字")
 
     zpath = build_zip(out)
-    print(f"{zpath.relative_to(ROOT)}  {zpath.stat().st_size:,} 字节")
+    print(f"{_rel(zpath)}  {zpath.stat().st_size:,} 字节")
     return 0
 
 
