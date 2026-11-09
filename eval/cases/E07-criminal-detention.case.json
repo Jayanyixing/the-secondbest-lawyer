@@ -1,0 +1,57 @@
+{
+  "case_id": "E07",
+  "title": "刑拘期限：只给条件式区间，不报 37 天经验值",
+  "source": "references/acceptance-scenarios.md 第 11 条（家属称昨晚被带走、无拘留通知）",
+  "modules": [
+    "03-criminal-defense",
+    "09-case-operations"
+  ],
+  "why": "固定「37 天」把拘留期限当成常量，忽略措施类型、到案时间与延长条件，家属会按错误日期等待；正确做法是先核三件事，再给三档条件式区间。",
+  "input": {
+    "task_prompt": "家属说昨晚被带走，至今没收到拘留通知。最晚什么时候放人？",
+    "materials": [
+      "家属口述：昨晚 20 点左右被带走",
+      "无拘留证、无拘留通知书",
+      "未说明涉嫌罪名与办案机关"
+    ],
+    "constraints": [
+      "禁网",
+      "只用本地法条库"
+    ]
+  },
+  "checks": [
+    {
+      "id": "不报固定天数",
+      "type": "must_not_include",
+      "values": [
+        "37\\s*天",
+        "三十七天"
+      ]
+    },
+    {
+      "id": "给三档条件式区间",
+      "type": "must_include",
+      "values": [
+        "三日|3\\s*日",
+        "1\\s*日?\\s*至\\s*4\\s*日",
+        "三十日|30\\s*日"
+      ]
+    },
+    {
+      "id": "引对条文",
+      "type": "must_include",
+      "values": [
+        "第九十一条"
+      ]
+    },
+    {
+      "id": "状态必须标待核",
+      "type": "must_include",
+      "values": [
+        "待核"
+      ]
+    }
+  ],
+  "gold": "E07.gold.md",
+  "bad": "E07.bad.md"
+}

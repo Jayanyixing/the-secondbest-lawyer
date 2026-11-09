@@ -1,5 +1,13 @@
 # 变更记录
 
+## 2026-11-09（v2.39.26）eval/cases 扩到 12 案，判据补 must_not_affirm
+
+- `eval/cases/` 新增 6 个可机器判定场景：E07 刑拘期限（三档条件式、禁报 37 天）、E08 附件提示词注入（不执行外发、仍完成合同审查）、E09 尽调限定性结论（禁绝对化，R6 无违例）、E10 投标业绩缺口（明示硬缺口、不编第三项）、E11 一审生效待核（不称终审／已生效）、E12 跨新旧法时点（时间效力第一条、不裸套民法典）。
+- 新增断言类型 `must_not_affirm`：复用 `citation_lint.affirms_claim()`，只拦「肯定地声称」，同一分句内有「不／未／不得／不可／禁止／严禁」等否定词时不触发。金标因此可以写「不能写成『不存在任何债务』」这类合规否定句而不被误杀；反例「不存在任何债务，可以放心签约」仍被拦。
+- 文档：`eval/cases/README.md` 补齐 12 案清单与断言表，主 README、`eval/README.md` 的案例数与判别力同步改为 12/12。
+- 构建：`tools/build.py` 的 `--out` 支持仓库外路径（此前 `path.relative_to(ROOT)` 抛 ValueError）；`build_zip()` 写完即自检条目名，发现 `cards.full` 或 `-wal/-shm/-journal` 直接删除产物并报错，从构建层锁死泄露。
+- 回归：`eval_cases` 12/12；`test_citation_lint` 160/160、`test_lawdb` 9/9、`test_lawdiff` 5/5、`test_tender` 7/7、`test_lint_docgen_bugs` 11/11；`build.py` 正常出包，伪造 `-wal` 条目时自检删除产物并退出 1。
+
 ## 2026-11-09（v2.39.25）eval/cases 基准集：6 个可机器判定的场景
 
 - `eval/cases/` 此前只有 `.gitkeep`，两批盲评要人读人评，跑一轮成本高，「改完会不会退回去」没有人守。新增 6 个合成场景 + `tools/eval_cases.py` 跑分器，一条命令跑完，不需要人打分。

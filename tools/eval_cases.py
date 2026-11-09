@@ -18,6 +18,7 @@
 
   must_include      {"values": [正则…]}      每条正则都要命中
   must_not_include  {"values": [正则…]}      每条正则都不许命中
+  must_not_affirm   {"values": [词…]}        不得「肯定地」声称；同一分句内有否定词不算
   max_lines         {"value": n}             行数上限
   case_no_allow     {"values": [案号…]}       正文出现的案号必须都在白名单内
   lint              {"mode": "self", "strict": true, "contract": "x.md",
@@ -80,6 +81,13 @@ def check_one(chk: dict, text: str, base: Path) -> tuple[bool, str]:
             m = re.search(pat, text)
             if m:
                 return False, f"出现不该有的「{m.group(0)[:40]}」"
+        return True, ""
+
+    if kind == "must_not_affirm":
+        # 复用 lint 的分句否定判断：金标写「不能写成『不存在任何债务』」不算声称
+        for word in chk.get("values", []):
+            if CL.affirms_claim(text, word):
+                return False, f"出现肯定声称「{word}」"
         return True, ""
 
     if kind == "max_lines":

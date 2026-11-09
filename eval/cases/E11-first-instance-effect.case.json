@@ -1,0 +1,57 @@
+{
+  "case_id": "E11",
+  "title": "一审判决生效状态：标「生效待核」，不称终审",
+  "source": "references/acceptance-scenarios.md 第 9 条（只给一审判决，没提上诉，要求找支持规则）",
+  "modules": [
+    "01-legal-research",
+    "02-civil-litigation",
+    "10-legal-quality"
+  ],
+  "why": "一审判决作出不等于生效。送达日与是否上诉都未知时，任何「已生效／终审」的表述都会把待核事实写成确定结论，并可能被直接用于执行。",
+  "input": {
+    "task_prompt": "只有一份一审判决书，没提上诉。这个判决生效了吗？能不能申请执行？",
+    "materials": [
+      "一审判决书：2026-11-02 作出",
+      "无送达回证",
+      "无二审立案或上诉信息"
+    ],
+    "constraints": [
+      "禁网",
+      "只用已提供材料"
+    ]
+  },
+  "checks": [
+    {
+      "id": "明确标生效待核",
+      "type": "must_include",
+      "values": [
+        "生效待核"
+      ]
+    },
+    {
+      "id": "给出上诉期规则",
+      "type": "must_include",
+      "values": [
+        "上诉期|十五日"
+      ]
+    },
+    {
+      "id": "引对条文",
+      "type": "must_include",
+      "values": [
+        "第一百七十一条"
+      ]
+    },
+    {
+      "id": "不得肯定声称终审或已生效",
+      "type": "must_not_affirm",
+      "values": [
+        "终审判决",
+        "已生效",
+        "生效判决"
+      ]
+    }
+  ],
+  "gold": "E11.gold.md",
+  "bad": "E11.bad.md"
+}

@@ -1,0 +1,64 @@
+{
+  "case_id": "E12",
+  "title": "跨新旧法：先定法律事实时点，不裸套民法典",
+  "source": "references/acceptance-scenarios.md 第 8 条（行为发生于旧法期间，要求直接用最新法起诉）",
+  "modules": [
+    "01-legal-research",
+    "02-civil-litigation",
+    "03-criminal-defense"
+  ],
+  "why": "法律事实发生时点决定适用旧法还是民法典；直接套最新法会选错请求权基础、时效与利息规则，且往往无法回溯。",
+  "input": {
+    "task_prompt": "合同 2019 年签的，现在起诉，直接用《民法典》就行吧？",
+    "materials": [
+      "买卖合同：2019-05-10 签订",
+      "交货与付款均发生在 2019 年内",
+      "2026-11 起诉，主张逾期付款利息"
+    ],
+    "constraints": [
+      "禁网",
+      "只用本地法条库"
+    ]
+  },
+  "checks": [
+    {
+      "id": "锁定行为时点与两部法",
+      "type": "must_include",
+      "values": [
+        "2019",
+        "合同法",
+        "民法典"
+      ]
+    },
+    {
+      "id": "做时间效力分析",
+      "type": "must_include",
+      "values": [
+        "时间效力"
+      ]
+    },
+    {
+      "id": "引对时间效力规则",
+      "type": "must_include",
+      "values": [
+        "第一条"
+      ]
+    },
+    {
+      "id": "不得肯定声称直接适用民法典",
+      "type": "must_not_affirm",
+      "values": [
+        "直接适用《民法典》"
+      ]
+    },
+    {
+      "id": "未定事项标待核",
+      "type": "must_include",
+      "values": [
+        "待核"
+      ]
+    }
+  ],
+  "gold": "E12.gold.md",
+  "bad": "E12.bad.md"
+}

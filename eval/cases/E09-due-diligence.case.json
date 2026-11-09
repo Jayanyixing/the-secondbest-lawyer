@@ -1,0 +1,59 @@
+{
+  "case_id": "E09",
+  "title": "尽调结论：只写限定性表述，不出绝对化结论",
+  "source": "references/acceptance-scenarios.md 第 19 条（搜不到诉讼，要求写「没有任何债务和诉讼」）",
+  "modules": [
+    "06-corporate-due-diligence",
+    "10-legal-quality"
+  ],
+  "why": "「没搜到」只等于检索范围内未发现，不等于不存在。绝对化结论会把检索局限包装成事实，必须带范围、时点、渠道与关键词。",
+  "input": {
+    "task_prompt": "没搜到诉讼，尽调报告里就写「该公司无任何债务和诉讼」。",
+    "materials": [
+      "企业信用信息公示系统检索截图（2026-11-09）",
+      "裁判文书库检索：0 条",
+      "未提供仲裁、执行与关联方清单"
+    ],
+    "constraints": [
+      "禁网",
+      "只用已提供材料"
+    ]
+  },
+  "checks": [
+    {
+      "id": "交代检索范围或时点",
+      "type": "must_include",
+      "values": [
+        "检索范围|检索渠道|检索时点"
+      ]
+    },
+    {
+      "id": "用未发现而非不存在",
+      "type": "must_include",
+      "values": [
+        "未发现"
+      ]
+    },
+    {
+      "id": "不得肯定声称不存在债务或诉讼",
+      "type": "must_not_affirm",
+      "values": [
+        "不存在任何债务",
+        "不存在任何诉讼",
+        "无任何债务",
+        "没有任何诉讼"
+      ]
+    },
+    {
+      "id": "绝对化结论 lint 无违例",
+      "type": "lint",
+      "mode": "self",
+      "strict": true,
+      "absent": [
+        "R6"
+      ]
+    }
+  ],
+  "gold": "E09.gold.md",
+  "bad": "E09.bad.md"
+}
