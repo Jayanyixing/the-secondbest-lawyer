@@ -149,6 +149,10 @@ def normalize_check(raw, out_of_vocab: list[str] | None = None) -> str:
 
 CHECK_ALLOWED_FOREIGN = CHECK_UNVERIFIED_TEXT | {"", "na", "不适用", "unknown"}
 
+# 底稿里「出处」可能落在不同字段名：JSON 用 source_url，表格用「出处」，老底稿用 url。
+# R18 与导出件判定都按这组字段取，不要只认其中一两个，否则会误报「渠道官方却无链接」。
+SOURCE_KEYS = ("location", "court", "name", "source", "url", "source_url", "link", "出处", "出处链接")
+
 # 与 citation.md「官方复核」清单保持一致的站点表：(主机名, 路径前缀)
 # 匹配规则：主机名**等于**白名单域名，或以 "." + 白名单域名结尾；不认裸 gov.cn。
 OFFICIAL_SITES: list[tuple[str, str | None]] = [
@@ -291,7 +295,10 @@ VAGUE_CITATIONS = [
     "根据相关规定", "根据有关法律规定", "依照有关规定", "相关法律法规规定",
     "司法实践普遍认为", "有判例支持", "某法院认为", "司法实践中一般认为",
 ]
-DEADLINE_WORDS = ["截止", "期限", "届满", "上诉期", "答辩期", "举证期", "时效", "过期", "最后一日", "到期"]
+# 只盯「计算得出的期限」。「期限」单独出现多是合同条款里的期间定义（合同期限二年、
+# 竞业期限三年），不是期限断言，不在此列；引号内是引来的原文，也不查。
+DEADLINE_WORDS = ["截止", "届满", "到期", "上诉期", "答辩期", "举证期", "最后一日", "过期", "时效", "最迟"]
+QUOTED_SPAN_RE = re.compile(r"「[^」]*」|“[^”]*”|\"[^\"]*\"|『[^』]*』")
 DATE_RE = re.compile(r"\d{4}\s*[-/年]\s*\d{1,2}\s*[-/月]\s*\d{1,2}\s*日?|\d{4}-\d{2}-\d{2}")
 CASE_NO_RE = re.compile(r"[（(]\s*(?:19|20)\d{2}\s*[）)][^\s，。；：、（）()]{2,32}?号")
 GUIDE_NO_RE = re.compile(r"指导案例\s*\d+\s*号|入库编号\s*[\w\-]{4,}")
@@ -315,8 +322,16 @@ RISK_LEVEL_RE = re.compile(r"^\**\s*(高|中|低)")
 MUST_FIX_ROW_RE = re.compile(r"^必改\s*\d+")
 CONDITIONAL_RE = re.compile(r"条件式\s*[（(]\s*待补材料")
 PENDING_MATERIAL_ID_RE = re.compile(r"E-\d{1,3}")
-CONDITIONAL_COUNT_RES = [re.compile(r"条件式[^。；\n]{0,16}?(\d+)\s*项")]
-DETERMINATE_COUNT_RES = [re.compile(r"文本内(?:可)?确定(?:缺陷)?[^。；\n]{0,10}?(\d+)\s*项")]
+# 条件式／确定缺陷的计数声明只认这三种形态，避免把「（含 2 项条件式），低风险 3 项」读成 3 项
+CONDITIONAL_COUNT_RES = [
+    re.compile(r"条件式\s*[（(]\s*待补材料\s*[）)]\s*(\d+)\s*项"),
+    re.compile(r"条件式\s*(\d+)\s*项"),
+    re.compile(r"(\d+)\s*项条件式"),
+]
+DETERMINATE_COUNT_RES = [
+    re.compile(r"文本内(?:可)?确定(?:的)?缺陷\s*(\d+)\s*项"),
+    re.compile(r"文本内(?:可)?确定\s*(\d+)\s*项"),
+]
 
 
 def parse_tables(lines: list[str]) -> list[dict]:
@@ -913,9 +928,10 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
                         f"[{tag}] 的回读记录缺日期：写「已回读（YYYY-MM-DD）」，取不到日期写「已回读（日期待补）」",
                     )
 
-        # R5 期限日期必须带状态标签
-        if any(w in line for w in DEADLINE_WORDS) and DATE_RE.search(line):
-            if not re.search(r"已核|〔假设|\[假设|待核|未核", line):
+        # R5 期限日期必须带状态标签（只看计算得出的死线，引号内原文不查）
+        probe = QUOTED_SPAN_RE.sub("", line)
+        if any(w in probe for w in DEADLINE_WORDS) and DATE_RE.search(probe):
+            if not re.search(r"已核|〔假设|\[假设|待核|未核", probe):
                 rep.error("R5", f"第 {idx} 行给出期限日期但没有状态标签（已核／〔假设〕／待核）：{line.strip()[:60]}")
 
         # R6 绝对化措辞
@@ -997,7 +1013,7 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
         if not eid:
             continue
         channel = entry.get("channel") or "unknown"
-        source = " ".join(str(entry.get(k) or "") for k in ("location", "court", "name", "source", "url"))
+        source = " ".join(str(entry.get(k) or "") for k in SOURCE_KEYS)
         if channel == "official":
             verdict = official_domain_ok(source)
             if verdict is None:

@@ -372,6 +372,11 @@ def main() -> int:
     _chk(code == 1 and out.count("[R19]") == 3, f"综合样例应报 3 条 R19，实际 {out.count('[R19]')}", fails)
     _chk("[R20]" in out and "[R21]" in out, "综合样例应同时命中 R20、R21", fails)
 
+    # R18：出处写在 source_url 字段（真实底稿常见写法）也要认得
+    code, out = run_fixture("source-url-official.md", "source-url-official.json")
+    _chk(code == 0, f"source_url 底稿应通过，实际 {code}：{out[:120]}", fails)
+    _chk("[R18]" not in out and "[R2]" not in out, "source_url 被当成「无官方链接」误报", fails)
+
     if fails:
         for f in fails:
             print("失败：" + f)

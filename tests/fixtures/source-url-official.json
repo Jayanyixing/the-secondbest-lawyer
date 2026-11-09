@@ -1,0 +1,19 @@
+{
+  "citations": [
+    {
+      "id": "N-01",
+      "type": "法律",
+      "name": "中华人民共和国劳动合同法",
+      "number": "第十九条",
+      "channel": "official",
+      "location": "第二章 劳动合同的订立 第十九条",
+      "source_url": "http://www.npc.gov.cn/c2/c183/c198/201905/t20190522_26978.html",
+      "read_scope": "full",
+      "quote": "劳动合同期限一年以上不满三年的，试用期不得超过二个月",
+      "reread": "已回读（2026-11-09）",
+      "official_check": "verified",
+      "norm_status": "current",
+      "apply_time": {"act": "2026-12-01", "procedure": "", "version": "2012 修正", "basis": "签约与用工均在现行文本施行后"}
+    }
+  ]
+}
