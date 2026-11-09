@@ -244,11 +244,11 @@ python3 tools/lawdb.py card-query 验收
 
 含当事人姓名的 5 张案卷卡（`id` 1、2、6、9、14）留在本地全量库 `data/cards.full.sqlite`（已 gitignore，100 张）。**两张表不是同一个东西**：
 
-| 文件 | 卡片数 | 是否入库 |
+| 文件 | 卡片数（2026-11-09 实测） | 是否入库 |
 |---|---:|---|
-| `data/cards.sqlite` | 93（全 verified） | ✅ |
-| `data/cards.full.sqlite` | 98（全 verified，含 5 张姓名卡） | ❌ |
-| `data/cards.json` | 93，与 `cards.sqlite` 同源导出的只读副本 | ✅ |
+| `data/cards.sqlite` | 95（全 verified） | ✅ |
+| `data/cards.full.sqlite` | 100（全 verified，含 5 张姓名卡） | ❌ |
+| `data/cards.json` | 95，与 `cards.sqlite` 同源导出的只读副本 | ✅ |
 
 `card_health.py` 默认体检 95 张那份；要体检全量：`python3 tools/card_health.py --db data/cards.full.sqlite`。新增卡片默认写 `cards.sqlite`，涉姓名的那几张本地手动挪到 `cards.full.sqlite`，**不要把全量库推上去**。
 
@@ -284,7 +284,7 @@ lawdb.py card-query 施工 --status pending    # 只看待核
 lawdb.py card-query 质量 --kind rule         # 只看规则卡（会议纪要/司法解释类）
 ```
 
-当前入库 **95 张全部 verified**（判例 50、规则 45，另 5 张姓名卡在本地 `cards.full.sqlite`）。`data/cards.json` 由同一份 `cards.sqlite` 导出，两者内容一致；改库后跑 `python3 tools/lawdb.py card-export` 重新导出，别手改 JSON。
+当前入库 **95 张全部 verified**（2026-11-09 实测：判例 45、规则 50；另 5 张姓名卡在本地 `cards.full.sqlite`，全量 100 张）。`data/cards.json` 由同一份 `cards.sqlite` 导出，两者内容一致；改库后跑 `python3 tools/lawdb.py card-export` 重新导出，别手改 JSON。
 
 从判决书抽卡的顺序与反例见 [`templates/card-extraction.md`](templates/card-extraction.md)。
 
@@ -336,8 +336,8 @@ python3 tools/lawdb.py verify         # 法条文件哈希，84/84
 ## 已知局限
 
 - 格式、内部链接、校验器、法条库、构建与到期脚本已实测；**未做真实案件准确率评测**（见上节）。
-- 本地法条库 84 部、9081 条，覆盖民法典、刑法、三大诉讼法、公司法、劳动、建工、担保、破产、知产、行政与数据合规，含 20 部司法解释与规定；**不含北京以外的地方性文件，部门规章仅 7 部**。78 部为整理件（未核），正式文书引用前须按 `citation.md` 回读官方原文。
-- 卡片库 100 张全部来自已办案件与公开典型案例，**只能证明「这一案这样判」，不证明跨案结论**；`pending` 卡不可引用。
+- 本地法条库 **84 部、9081 条**（2026-11-09 `lawdb.py stats` 实测），覆盖民法典、刑法、三大诉讼法、公司法、劳动、建工、担保、破产、知产、行政与数据合规，含 20 部司法解释与规定；**不含北京以外的地方性文件，部门规章仅 7 部**。其中 **10 部为官方原件逐条比对（已核），74 部为整理件（未核）**，正式文书引用前须按 `citation.md` 回读官方原文。
+- 卡片库全量 100 张（入库 95 张）全部来自已办案件与公开典型案例，**只能证明「这一案这样判」，不证明跨案结论**；`pending` 卡不可引用。
 - 法条条号与数值一律现场核，技能内不写死条文内容——避免技能自己制造错误引用。
 - 行政、婚姻家事继承、破产重整、知识产权实体比对、涉税、涉外等属范围外，只给边界与最小辅助，见 [`scope.md`](the-secondbest-lawyer/references/scope.md)；**劳动人事不属范围外**，由 [`14-labor.md`](the-secondbest-lawyer/references/14-labor.md) 覆盖（不做精确测算、伤残等级、竞业效力终局判断）。
 - 单会话内的“复核”只是自查，交付物会标 `〔自查〕`；要独立复核需新上下文或另一位律师。
