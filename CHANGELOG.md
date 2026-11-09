@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2026-11-10（v2.39.30）补第四套 lawdb 专项探针
+
+- 将第一轮生成、遗留在 `.workbuddy/tests/`（被 .gitignore 忽略）的 `test_lawdb_bugs.py` 移入 `tests/`，成为第四套专项探针。
+- 12 条断言覆盖四类旧 bug：`resolve_laws` 简称落到司法解释而非母法、`parse_articles` 把折行引用误切成新条、`cmd_import` 去重丢原条文后半段、`docx_to_text` 泄漏 XML 残渣与段内换行、`cmd_card_query` 短同义词静默丢结果。
+- 基线 `0ed7b0b` 为 3/12（4 个 bug 场景均至少一条失败），当前 12/12；默认读 `tools/lawdb.py`，支持 `TSL_TOOLS_DIR` 指向基线。
+- `check_all.py` 自动发现四套探针：全量 14/14、fast 11/11；CI 继续跑全量。
+
 ## 2026-11-09（v2.39.29）一键门禁 check_all + GitHub Actions + pre-push
 
 - 新增 `tools/check_all.py`：零依赖全量门禁，按序跑核心四测、`tests/test_*.py` 探针、12 案判别力、`lawdb.py verify`、`retrieval_check.py`，再用临时目录试构建并扫描分发包与 `git ls-files`；发现 `cards.full`、WAL/SHM/journal 或未脱敏案号即退出 1。`--fast` 跳过试构建与数据校验，约 2.5 秒，供 pre-push 使用。

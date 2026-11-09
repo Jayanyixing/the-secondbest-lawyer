@@ -354,11 +354,12 @@ python3 tools/eval_cases.py --case E03 --answer 某份产出.md   # 判一份真
 ## 自检：改完先跑一遍
 
 ```bash
-python3 tools/check_all.py           # 一键全量门禁，13 项全绿（CI 跑这个）
-python3 tools/check_all.py --fast    # 快速门禁，10 项；pre-push 钩子用
+python3 tools/check_all.py           # 一键全量门禁，14 项全绿（CI 跑这个）
+python3 tools/check_all.py --fast    # 快速门禁，11 项；pre-push 钩子用
 python3 tools/test_citation_lint.py   # 引用校验器回归，160/160 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
+python3 tests/test_lawdb_bugs.py      # lawdb 切条／简称／短同义词 12 项探针，12/12
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5
 python3 tests/test_remaining_tools_bugs.py  # 构建/比对/投标 10 项回归探针，10/10
 python3 tests/test_tender_eval_bugs.py      # 投标四件套/eval 16 项回归探针，16/16
