@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2026-11-09（v2.39.5）北京政府门户入白名单，开放表述改逐一列明
+
+- 经用户决定：在 `court.gov.cn`／`npc.gov.cn`／`www.gov.cn/zhengce/xxgk/gjgzk/`／`bjrd.gov.cn` 之外，新增 `beijing.gov.cn`（北京市政府门户）。`spp.gov.cn`（最高检）、`moj.gov.cn`（司法部）、`bjcourt.gov.cn`（北京法院网）**不纳入**。
+- `citation.md` 原写「`www.bjrd.gov.cn` 及北京市发布机关官网」，开放表述无法机器校验；改为逐一列明 `www.bjrd.gov.cn`（北京市人大）、`beijing.gov.cn`（北京市政府门户）。`OFFICIAL_SITES` 同步。
+- 断言 117→121（北京市政府门户放行；最高检、司法部、北京法院网仍拒）。
+- `tests/fixtures/EXPECTATIONS.md` 顶部补说明：样例里的 `flk.npc.gov.cn/detail2.html` 是测试占位（指向法规库首页），真实底稿须填具体原文链接。
+
 ## 2026-11-09（v2.39.4）域名匹配改主机名规则，出处与白名单对齐
 
 - 实测四类地址（渠道 official）：`https://www.pkulaw.com/redirect?u=court.gov.cn`、`https://court.gov.cn.evil.com/x`、`https://notcourt.gov.cn/x`、一合规一不合规并存。改前 `notcourt.gov.cn` 被放行（裸 `gov.cn` 后缀匹配把所有 `.gov.cn` 都当官方），`pkulaw.com/redirect?u=court.gov.cn` 仅因「同时出现商业域名」才碰巧被拦。

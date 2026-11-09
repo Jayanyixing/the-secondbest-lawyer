@@ -6,6 +6,8 @@
 python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/<名>.json] [--mode offline] [--strict]
 ```
 
+> **关于 `flk.npc.gov.cn/detail2.html`**：样例底稿里的这个地址只是**测试占位**，用来满足「官方渠道必须有官方站点链接」这条校验（R18），它指向的是法规库首页，不是任何一部具体法律的原文页。真实底稿必须填**具体原文链接**（如 `https://flk.npc.gov.cn/detail2.html?ZmY4MDgwODE...` 这种带法规 ID 的地址，或该法规在 `www.gov.cn`／`court.gov.cn` 的实际页面），否则「已回读」「已核」都无从谈起。
+
 | 样例 | 参数 | 期望退出码 | 期望规则 | 说明 |
 |---|---|---:|---|---|
 | `commercial-source.md/.json` | `--ledger …` | 0 | R0（警告） | 商业库已回读、官方复核未核，可以交付但须列「提交前须核」 |
