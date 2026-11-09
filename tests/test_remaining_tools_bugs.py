@@ -27,6 +27,10 @@ import lawdiff  # noqa: E402
 CASES: list[tuple[str, object]] = []
 
 
+class Skip(Exception):
+    """安装布局下不适用（例如 build.py 的仓库相对路径）。"""
+
+
 def case(name: str):
     def deco(fn):
         CASES.append((name, fn))
@@ -71,6 +75,8 @@ def _() -> None:
 
 @case("build：--lite-extra 参数可用")
 def _() -> None:
+    if not (build.SKILL_DIR / "references").is_dir():
+        raise Skip("安装布局没有 the-secondbest-lawyer/references，本探针只适用仓库")
     old_check, old_zip = build.check_readme_numbers, build.build_zip
     build.check_readme_numbers = lambda: []
 
@@ -202,16 +208,20 @@ def _() -> None:
 
 
 def main() -> int:
-    failed = 0
+    failed = skipped = 0
     for name, fn in CASES:
         try:
             fn()
+        except Skip as exc:
+            skipped += 1
+            print(f"[跳过] {name}\n       {exc}")
         except Exception as exc:  # noqa: BLE001 - 探针要把断言失败都汇总
             failed += 1
             print(f"[失败] {name}\n       {exc}")
         else:
             print(f"[通过] {name}")
-    print(f"结果：{len(CASES) - failed}/{len(CASES)} 通过")
+    tail = f"，{skipped} 跳过" if skipped else ""
+    print(f"结果：{len(CASES) - failed - skipped}/{len(CASES)} 通过{tail}")
     return 1 if failed else 0
 
 
