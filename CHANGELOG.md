@@ -1,5 +1,14 @@
 # 变更记录
 
+## 2026-11-09（v2.39.4）域名匹配改主机名规则，出处与白名单对齐
+
+- 实测四类地址（渠道 official）：`https://www.pkulaw.com/redirect?u=court.gov.cn`、`https://court.gov.cn.evil.com/x`、`https://notcourt.gov.cn/x`、一合规一不合规并存。改前 `notcourt.gov.cn` 被放行（裸 `gov.cn` 后缀匹配把所有 `.gov.cn` 都当官方），`pkulaw.com/redirect?u=court.gov.cn` 仅因「同时出现商业域名」才碰巧被拦。
+- `sites_in()` 改为先按 URL 取真实 host，匹配规则收紧为「主机名等于白名单域名，或以 `.白名单域名` 结尾」；`court.gov.cn.evil.com`、`notcourt.gov.cn` 不再放行。
+- 代码与 `citation.md` 对齐：删除裸 `gov.cn`、`spp.gov.cn`、`moj.gov.cn`；`www.gov.cn` 只放行 `/zhengce/xxgk/gjgzk/` 路径（国家规章库），其他路径报错。
+- **官方站点下载的导出件**登记写法写进 `citation.md`：渠道「导出」＋出处写完整官方链接＋官方复核「已核（与官方原文一致）」，三者缺一即 R18；商业库导出件写已核仍报错（fixture `export-from-official` / `commercial-verified-*`）。
+- 渠道写「官方」但出处没有任何域名（只有文件名或页码）→ 新增 R18 错误（fixture `official-nodomain`）。
+- 断言 107→117。
+
 ## 2026-11-09（v2.39.3）官方渠道校验出处域名；留空条目计入未核
 
 - 实测：渠道写「官方页面」但出处是 `pkulaw.com`／`lexiscn.com` 时，R18 **不触发**——原先只看渠道字段，从不看出处域名。新增 `OFFICIAL_HOSTS`（court.gov.cn／npc.gov.cn／gov.cn／bjrd.gov.cn／spp.gov.cn／moj.gov.cn）与 `official_domain_ok()`：渠道为官方、出处含域名且不在白名单 → R18，提示改渠道或改出处。渠道为「导出」（用户导出件）不做出处域名约束。

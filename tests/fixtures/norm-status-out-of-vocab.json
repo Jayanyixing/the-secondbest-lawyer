@@ -1,5 +1,17 @@
 {
   "citations": [
-    {"id":"N-01","type":"法律","number":"第五百六十五条","channel":"official","location":"第 1 页","read_scope":"excerpt","quote":"合同自通知到达对方时解除","reread":"已回读（2026-11-09）","official_check":"verified","norm_status":"有效","apply_time":"行为时点 2024-03-01"}
+    {
+      "id": "N-01",
+      "type": "法律",
+      "number": "第五百六十五条",
+      "channel": "official",
+      "location": "https://flk.npc.gov.cn/detail2.html（第 1 页）",
+      "read_scope": "excerpt",
+      "quote": "合同自通知到达对方时解除",
+      "reread": "已回读（2026-11-09）",
+      "official_check": "verified",
+      "norm_status": "有效",
+      "apply_time": "行为时点 2024-03-01"
+    }
   ]
 }

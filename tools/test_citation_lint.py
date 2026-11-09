@@ -217,11 +217,25 @@ def main() -> int:
     code, out = run_fixture("commercial-verified-outofvocab.md", "commercial-verified-outofvocab.json")
     _chk(code == 1 and "[R18]" in out, f"商业库+「基本核实」应报 R18，实际 {code}", fails)
 
+    # 官方渠道必须给出官方链接；导出件出处写明官方站点才可记「已核」
+    code, out = run_fixture("official-nodomain.md", "official-nodomain.json")
+    _chk(code == 1 and "没有任何官方站点链接" in out, f"官方渠道无出处链接应报 R18，实际 {code}", fails)
+    code, out = run_fixture("export-from-official.md", "export-from-official.json")
+    _chk(code == 0, f"官方站点导出件记「已核」应通过，实际 {code}：{out[:100]}", fails)
+    _chk("[R18]" not in out, "官方站点导出件不得报 R18", fails)
+    _chk(cl2.check_allowed_for_channel("已核（与官方原文一致）", "user_export", "https://www.pkulaw.com/x.pdf") is False,
+         "商业库导出件写已核仍应被拒", fails)
+
     # 渠道写「官方」但出处域名不在白名单 → R18；用户导出件不受域名约束
     _chk(cl2.official_domain_ok("flk.npc.gov.cn") , "官方域名应通过", fails)
     _chk(not cl2.official_domain_ok("https://www.pkulaw.com/x"), "pkulaw.com 应判为白名单外", fails)
     _chk(not cl2.official_domain_ok("https://www.lexiscn.com/y"), "lexiscn.com 应判为白名单外", fails)
-    _chk(cl2.official_domain_ok("第 1 页"), "没写域名视为可接受", fails)
+    _chk(cl2.official_domain_ok("第 1 页") is None, "没写域名应返回 None（由 R18 报「无官方链接」）", fails)
+    for t in ("https://www.pkulaw.com/redirect?u=court.gov.cn", "https://court.gov.cn.evil.com/x",
+              "https://notcourt.gov.cn/x", "https://www.court.gov.cn/a https://www.pkulaw.com/b"):
+        _chk(cl2.official_domain_ok(t) is False, f"「{t[:40]}」应判为不合规", fails)
+    _chk(cl2.official_domain_ok("https://www.gov.cn/zhengce/xxgk/gjgzk/x.html") is True, "国家规章库路径应放行", fails)
+    _chk(cl2.official_domain_ok("https://www.gov.cn/zhengce/content/2024/x.html") is False, "www.gov.cn 非规章库路径应拒", fails)
     code, out = run_fixture("official-nonwhitelist.md", "official-nonwhitelist.json")
     _chk(code == 1, f"官方渠道 + 白名单外域名应阻断，实际 {code}", fails)
     _chk(out.count("[R18]") == 2, f"应报 2 条 R18（pkulaw/lexiscn），实际 {out.count('[R18]')}", fails)

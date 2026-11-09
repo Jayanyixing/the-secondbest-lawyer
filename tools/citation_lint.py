@@ -149,32 +149,68 @@ def normalize_check(raw, out_of_vocab: list[str] | None = None) -> str:
 
 CHECK_ALLOWED_FOREIGN = CHECK_UNVERIFIED_TEXT | {"", "na", "不适用", "unknown"}
 
-# 只有政府与法院自建站点算「官方页面」。zh.wikisource.org 等转载站只够做回读，
-# 不足以支撑「官方复核已核」，故不列入。
-OFFICIAL_HOSTS = (
-    "court.gov.cn",
-    "npc.gov.cn",
-    "gov.cn",
-    "bjrd.gov.cn",
-    "spp.gov.cn",
-    "moj.gov.cn",
-)
-DOMAIN_RE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:cn|com|net|org|gov|edu|io|hk|tw|info)")
+# 与 citation.md「官方复核」清单保持一致的站点表：(主机名, 路径前缀)
+# 匹配规则：主机名**等于**白名单域名，或以 "." + 白名单域名结尾；不认裸 gov.cn。
+OFFICIAL_SITES: list[tuple[str, str | None]] = [
+    ("court.gov.cn", None),
+    ("npc.gov.cn", None),
+    ("www.gov.cn", "/zhengce/xxgk/gjgzk/"),
+    ("bjrd.gov.cn", None),
+]
+URL_RE = re.compile(r"https?://[^\s，。；、）)\]】>\"']+")
+HOST_RE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:cn|com|net|org|gov|edu|io|hk|tw|info)")
+
+
+def sites_in(text: str) -> list[tuple[str, str | None]]:
+    """取出出处分里的 (主机名, 路径)：带协议的取真正 host，裸域名 path 记为 None。"""
+    out: list[tuple[str, str | None]] = []
+    rest = text or ""
+    for m in URL_RE.finditer(rest):
+        url = m.group(0)
+        mh = HOST_RE.search(url)
+        if not mh:
+            continue
+        host = mh.group(0).lower()
+        tail = url[mh.end():]
+        path = tail.split("?")[0].split("#")[0] if tail else ""
+        out.append((host, path or "/"))
+    rest = URL_RE.sub(" ", rest)
+    for mh in HOST_RE.finditer(rest):
+        host = mh.group(0).lower()
+        if not any(h == host for h, _ in out):
+            out.append((host, None))
+    return out
+
+
+def site_ok(host: str, path: str | None) -> bool:
+    for domain, prefix in OFFICIAL_SITES:
+        if not (host == domain or host.endswith("." + domain)):
+            continue
+        if prefix is None:
+            return True
+        if path is not None and path.startswith(prefix):
+            return True
+        return False
+    return False
 
 
 def domains_in(text: str) -> list[str]:
-    return [m.group(0).lower() for m in DOMAIN_RE.finditer(text or "")]
+    return [h for h, _ in sites_in(text)]
 
 
-def official_domain_ok(text: str) -> bool:
-    """出处里出现的域名是否都在官方白名单内；没写域名视为可接受。"""
-    found = domains_in(text)
+def official_domain_ok(text: str) -> bool | None:
+    """True＝出处都在官方白名单；False＝有不规范域名；None＝根本没写域名。"""
+    found = sites_in(text)
     if not found:
-        return True
-    return all(any(h == d or d.endswith("." + h) for h in OFFICIAL_HOSTS) for d in found)
+        return None
+    return all(site_ok(h, p) for h, p in found)
 
 
-def check_allowed_for_channel(raw) -> bool:
+def has_official_site(text: str) -> bool:
+    return any(site_ok(h, p) for h, p in sites_in(text))
+
+
+def check_allowed_for_channel(raw, channel: str = "", source: str = "") -> bool:
     """非官方渠道的官方复核栏：只接受未核词表、不适用或留空。
 
     不认识的肯定写法（「已比对一致」「已验证」「基本核实」）一律不许出现，
@@ -182,7 +218,13 @@ def check_allowed_for_channel(raw) -> bool:
     """
     if raw is None:
         return True
-    return str(raw).strip() in CHECK_ALLOWED_FOREIGN
+    v = str(raw).strip()
+    if v in CHECK_ALLOWED_FOREIGN:
+        return True
+    # 官方站点下载的导出件：出处写明官方链接时才可记「已核」
+    if channel == "user_export" and has_official_site(source):
+        return True
+    return False
 
 
 def claims_official_verified(raw) -> bool:
@@ -622,31 +664,41 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         else:
             rep.warn("R0", msg)
 
-    # R18 来源渠道与官方复核矛盾：非官方渠道只能记「未核」或「不适用」或留空
+    # R18 渠道与出处／官方复核不符
     for entry in ledger:
         eid = entry.get("id") or ""
         if not eid:
             continue
         channel = entry.get("channel") or "unknown"
-        if channel == "official" and not official_domain_ok(
-            " ".join(str(entry.get(k) or "") for k in ("location", "court", "name", "source", "url"))
-        ):
-            bad = [d for d in domains_in(" ".join(str(entry.get(k) or "") for k in ("location", "court", "name", "source", "url")))
-                   if not any(h == d or d.endswith("." + h) for h in OFFICIAL_HOSTS)]
-            rep.error(
-                "R18",
-                f"条目 {eid} 渠道写「官方」，但出处域名 {'、'.join(dict.fromkeys(bad))} 不在官方白名单内"
-                f"（{'、'.join(OFFICIAL_HOSTS)}）；用户导出件请把渠道写成「导出」",
-            )
-            continue
+        source = " ".join(str(entry.get(k) or "") for k in ("location", "court", "name", "source", "url"))
+        if channel == "official":
+            verdict = official_domain_ok(source)
+            if verdict is None:
+                rep.error(
+                    "R18",
+                    f"条目 {eid} 渠道写「官方」，但出处只有"
+                    f"「{entry.get('location') or ''}」，没有任何官方站点链接；"
+                    "补官方链接，或把渠道改成「商业」「导出」「口述」",
+                )
+                continue
+            if not verdict:
+                bad = [h for h, pth in sites_in(source) if not site_ok(h, pth)]
+                rep.error(
+                    "R18",
+                    f"条目 {eid} 渠道写「官方」，但出处主机名 {'、'.join(dict.fromkeys(bad))} 不在官方白名单内"
+                    f"（{'、'.join(d for d, _ in OFFICIAL_SITES)}，其中 www.gov.cn 限 /zhengce/xxgk/gjgzk/）；"
+                    "用户导出件请把渠道写成「导出」并在出处写明官方链接",
+                )
+                continue
         if channel != "official" and not check_allowed_for_channel(
-            entry.get("official_check_raw")
+            entry.get("official_check_raw"), channel, source
         ):
             rep.error(
                 "R18",
                 f"条目 {eid} 渠道非官方（{entry.get('channel') or '未填'}），官方复核却写成"
                 f"「{entry.get('official_check_raw') or entry.get('official_check')}」；"
-                "非官方渠道只能记「未核（仅商业库或转载）」或不适用或留空",
+                "非官方渠道只能记「未核（仅商业库或转载）」或不适用或留空"
+                "（官方站点下载的导出件须在出处写明官方链接）",
             )
 
     if out_of_vocab:
