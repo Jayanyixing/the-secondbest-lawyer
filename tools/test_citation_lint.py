@@ -217,6 +217,22 @@ def main() -> int:
     code, out = run_fixture("commercial-verified-outofvocab.md", "commercial-verified-outofvocab.json")
     _chk(code == 1 and "[R18]" in out, f"商业库+「基本核实」应报 R18，实际 {code}", fails)
 
+    # 渠道写「官方」但出处域名不在白名单 → R18；用户导出件不受域名约束
+    _chk(cl2.official_domain_ok("flk.npc.gov.cn") , "官方域名应通过", fails)
+    _chk(not cl2.official_domain_ok("https://www.pkulaw.com/x"), "pkulaw.com 应判为白名单外", fails)
+    _chk(not cl2.official_domain_ok("https://www.lexiscn.com/y"), "lexiscn.com 应判为白名单外", fails)
+    _chk(cl2.official_domain_ok("第 1 页"), "没写域名视为可接受", fails)
+    code, out = run_fixture("official-nonwhitelist.md", "official-nonwhitelist.json")
+    _chk(code == 1, f"官方渠道 + 白名单外域名应阻断，实际 {code}", fails)
+    _chk(out.count("[R18]") == 2, f"应报 2 条 R18（pkulaw/lexiscn），实际 {out.count('[R18]')}", fails)
+    _chk("flk.npc.gov.cn" not in out.split("不在官方白名单内")[0].split("R18]")[-1], "白名单内域名不应报错", fails)
+
+    # 非官方渠道且官方复核留空：计入「未核 N 条」，但不报错
+    code, out = run_fixture("foreign-empty-check.md", "foreign-empty-check.json")
+    _chk(code == 0, f"非官方渠道留空不应阻断，实际 {code}", fails)
+    _chk("官方复核未核 3 条" in out, f"留空条目应计入未核汇总，实际输出：{out[:120]}", fails)
+    _chk("[R18]" not in out and "[R2]" not in out, "留空条目不得报 R18/R2", fails)
+
     # 商业库 + 不含「核」字的肯定写法：R18 必须触发，并进未核汇总
     nonnuclear = ["已比对一致", "与官方原文一致", "已验证", "已确认", "已查证", "一致"]
     for v in nonnuclear:

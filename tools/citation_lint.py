@@ -149,6 +149,30 @@ def normalize_check(raw, out_of_vocab: list[str] | None = None) -> str:
 
 CHECK_ALLOWED_FOREIGN = CHECK_UNVERIFIED_TEXT | {"", "na", "不适用", "unknown"}
 
+# 只有政府与法院自建站点算「官方页面」。zh.wikisource.org 等转载站只够做回读，
+# 不足以支撑「官方复核已核」，故不列入。
+OFFICIAL_HOSTS = (
+    "court.gov.cn",
+    "npc.gov.cn",
+    "gov.cn",
+    "bjrd.gov.cn",
+    "spp.gov.cn",
+    "moj.gov.cn",
+)
+DOMAIN_RE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:cn|com|net|org|gov|edu|io|hk|tw|info)")
+
+
+def domains_in(text: str) -> list[str]:
+    return [m.group(0).lower() for m in DOMAIN_RE.finditer(text or "")]
+
+
+def official_domain_ok(text: str) -> bool:
+    """出处里出现的域名是否都在官方白名单内；没写域名视为可接受。"""
+    found = domains_in(text)
+    if not found:
+        return True
+    return all(any(h == d or d.endswith("." + h) for h in OFFICIAL_HOSTS) for d in found)
+
 
 def check_allowed_for_channel(raw) -> bool:
     """非官方渠道的官方复核栏：只接受未核词表、不适用或留空。
@@ -440,7 +464,11 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
     for entry in ledger:
         if entry.get("inline"):
             continue
-        missing = [f for f in REQUIRED_FIELDS if not str(entry.get(f, "")).strip() or entry.get(f) in (None, "unknown")]
+        required = list(REQUIRED_FIELDS)
+        if (entry.get("channel") or "unknown") != "official":
+            # 非官方渠道本就不该有官方复核结论，留空合法
+            required = [f for f in required if f != "official_check"]
+        missing = [f for f in required if not str(entry.get(f, "")).strip() or entry.get(f) in (None, "unknown")]
         if missing:
             rep.error("R2", f"底稿 {entry.get('id', '?')} 缺字段：{', '.join(missing)}")
 
@@ -599,7 +627,19 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         eid = entry.get("id") or ""
         if not eid:
             continue
-        if (entry.get("channel") or "unknown") != "official" and not check_allowed_for_channel(
+        channel = entry.get("channel") or "unknown"
+        if channel == "official" and not official_domain_ok(
+            " ".join(str(entry.get(k) or "") for k in ("location", "court", "name", "source", "url"))
+        ):
+            bad = [d for d in domains_in(" ".join(str(entry.get(k) or "") for k in ("location", "court", "name", "source", "url")))
+                   if not any(h == d or d.endswith("." + h) for h in OFFICIAL_HOSTS)]
+            rep.error(
+                "R18",
+                f"条目 {eid} 渠道写「官方」，但出处域名 {'、'.join(dict.fromkeys(bad))} 不在官方白名单内"
+                f"（{'、'.join(OFFICIAL_HOSTS)}）；用户导出件请把渠道写成「导出」",
+            )
+            continue
+        if channel != "official" and not check_allowed_for_channel(
             entry.get("official_check_raw")
         ):
             rep.error(
@@ -621,7 +661,13 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
     used_unverified = [
         e["id"]
         for e in ledger
-        if e.get("id") and e["id"] in used_ids and e.get("official_check") == "unverified"
+        if e.get("id")
+        and e["id"] in used_ids
+        and (
+            e.get("official_check") == "unverified"
+            # 非官方渠道且官方复核留空：没有官方原文可核，同样计入
+            or ((e.get("channel") or "unknown") != "official" and e.get("official_check") in (None, "", "unknown"))
+        )
     ]
     if used_unverified:
         rep.warn(

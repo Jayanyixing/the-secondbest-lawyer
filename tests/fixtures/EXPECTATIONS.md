@@ -19,6 +19,8 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `reused-quote.md/.json` | `--ledger …` | 0（警告） | R14 | 同一摘录被两个不同结论复用 |
 | `reused-quote.md/.json` | `--ledger … --strict` | 1 | R14 | 严格模式下摘录复用升为错误 |
 | `check-vocab-outliers.md/.json` | `--ledger …` | 0（警告） | R0 | `未经官方核实`／`尚未经官方核对`／`未能与官方原文核对`／`未完成核对`／`核对中`／`待核` 六种写法都按未核处理，并提示写法不在词表内 |
+| `official-nonwhitelist.md/.json` | `--ledger …` | 1 | R18 ×2 | 渠道写「官方」但出处在 pkulaw.com／lexiscn.com；`flk.npc.gov.cn` 属白名单不报 |
+| `foreign-empty-check.md/.json` | `--ledger …` | 0（警告） | R0 | 非官方渠道（商业库／用户导出件）官方复核留空：计入「未核 3 条」，不报 R2／R18 |
 | `commercial-affirmative-nonuclear.md/.json` | `--ledger …` | 1 | R18 ×6 | 商业库 + 不含「核」字的肯定写法（`已比对一致`／`与官方原文一致`／`已验证`／`已确认`／`已查证`／`一致`）全部报错，并进「未核 6 条」汇总 |
 | `commercial-verified-outofvocab.md/.json` | `--ledger …` | 1 | R18 | 商业库 + 词表外肯定写法「基本核实」：归一记未核，但仍算已核声称，报 R18 |
 | `commercial-unverified-variants.md/.json` | `--ledger …` | 0（警告） | R0 | `未核（仅商业库或转载）`／`未经核实`／`未能核实`／`尚未核` 都归为未核，不得报 R18 |

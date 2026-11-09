@@ -1,0 +1,43 @@
+{
+  "citations": [
+    {
+      "type": "法律",
+      "channel": "official",
+      "read_scope": "excerpt",
+      "reread": "已回读（2026-11-09）",
+      "norm_status": "current",
+      "apply_time": "行为时点 2024-03-01",
+      "id": "N-01",
+      "number": "第五百六十五条第一款",
+      "quote": "合同自通知到达对方时解除",
+      "location": "https://www.pkulaw.com/chl/abc.html",
+      "official_check": "已核实"
+    },
+    {
+      "type": "法律",
+      "channel": "official",
+      "read_scope": "excerpt",
+      "reread": "已回读（2026-11-09）",
+      "norm_status": "current",
+      "apply_time": "行为时点 2024-03-01",
+      "id": "N-02",
+      "number": "第五百六十五条第二款",
+      "quote": "通知到达对方时合同解除",
+      "location": "https://www.lexiscn.com/law/content.php?id=1",
+      "official_check": "已核实"
+    },
+    {
+      "type": "法律",
+      "channel": "official",
+      "read_scope": "excerpt",
+      "reread": "已回读（2026-11-09）",
+      "norm_status": "current",
+      "apply_time": "行为时点 2024-03-01",
+      "id": "N-03",
+      "number": "第五百六十四条",
+      "quote": "解除权行使需在合理期限内",
+      "location": "https://flk.npc.gov.cn/detail2.html",
+      "official_check": "已核实"
+    }
+  ]
+}
