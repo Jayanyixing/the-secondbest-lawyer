@@ -194,6 +194,15 @@ def main() -> int:
     for en in ("current", "amended", "repealed", "not_effective", "unconfirmed", "unknown"):
         _chk(cl2.normalize_norm_status(en) == en, f"英文值 {en} 应原样保留", fails)
 
+    # 官方复核的否定写法：一律按未核，不得报 R18
+    for raw in ("未核（仅商业库或转载）", "未经核实", "未能核实", "尚未核"):
+        _chk(cl2.normalize_check(raw) == "unverified", f"「{raw}」应归一为 unverified", fails)
+    _chk(cl2.normalize_check("已核（与官方原文一致）") == "verified", "正写「已核」仍应 verified", fails)
+    code, out = run_fixture("commercial-unverified-variants.md", "commercial-unverified-variants.json")
+    _chk(code == 0, f"否定写法不应阻断交付，实际 {code}", fails)
+    _chk("[R18]" not in out, "否定写法不得触发 R18", fails)
+    _chk("官方复核未核 4 条" in out, "否定写法应汇总为「官方复核未核 4 条」", fails)
+
     # 对抗样例：每种写法都要被拦住（详见 tests/fixtures/EXPECTATIONS.md）
     code, out = run_fixture("commercial-verified-variants.md", "commercial-verified-variants.json")
     _chk(code == 1 and out.count("[R18]") == 3, f"三种「已核」变体应各报 R18，实际 {out.count('[R18]')}", fails)
@@ -205,6 +214,12 @@ def main() -> int:
     _chk(code == 1 and "[R15]" in out, f"未来回读日期应报 R15，实际 {code}", fails)
     code, out = run_fixture("norm-status-out-of-vocab.md", "norm-status-out-of-vocab.json")
     _chk(code == 1 and "未确认" in out, f"词表外效力应按未确认报错，实际 {code}", fails)
+
+    # R14 严格模式升级为错误，普通模式仍为警告
+    code, out = run_fixture("reused-quote.md", "reused-quote.json")
+    _chk(code == 0 and "[R14]" in out, f"普通模式摘录复用应仅警告，实际 {code}", fails)
+    code, out = run_fixture("reused-quote.md", "reused-quote.json", "--strict")
+    _chk(code == 1 and "严格模式" in out, f"严格模式摘录复用应报错，实际 {code}", fails)
 
     # 严格模式 fixture：普通模式通过（仅警告），--strict 报 R16 错误
     code, out = run_fixture("strict-missing-effect.md", "strict-missing-effect.json")
@@ -229,7 +244,8 @@ def main() -> int:
             print("失败：" + f)
         print(f"结果：{len(fails)} 项不通过")
         return 1
-    print(f"结果：{_extra[1]}/{_extra[0]} 通过")
+    print(f"结果：{_extra[1]}/{_extra[0]} 条断言通过")
+    print("口径：每调用一次 _chk() 计一条断言；同一断言换 fixture 再跑算另一条。")
     return 0
 
 

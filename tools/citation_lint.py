@@ -94,6 +94,25 @@ SCOPE_CANON = {"full", "excerpt", "abstract", "title", "none"}
 EFFECT_CANON = {"effective", "unconfirmed", "subsequent"}
 
 
+CHECK_NEG_RE = re.compile(r"(未|尚未|没有|无法|不能|不予)(经|能|予|获得|得到)?核")
+
+
+def normalize_check(raw) -> str:
+    """官方复核取值：先把「未经核实」「未能核实」「尚未核」这类否定写法判为未核。
+
+    正写「已核（与官方原文一致）」不受影响；判定顺序是先否定、后正向，避免
+    「未经核实」因为不含「已核」而被归到 unknown。
+    """
+    if raw is None or not str(raw).strip():
+        return "unknown"
+    v = str(raw).strip()
+    if v in CHECK_CANON:
+        return v
+    if CHECK_NEG_RE.search(v):
+        return "unverified"
+    return pick(CHECK_WORDS, v, "unknown")
+
+
 def normalize_enum(raw, words, canon: set[str], default: str = "unknown") -> str:
     """JSON 里可能写中文（「已核（与官方原文一致）」），表格里可能写英文，两边都归一。"""
     if raw is None or not str(raw).strip():
@@ -110,7 +129,7 @@ def normalize_entries(entries: list[dict]) -> list[dict]:
         if e.get("norm_status") not in (None, ""):
             e["norm_status"] = normalize_norm_status(e["norm_status"])
         if e.get("official_check") is not None:
-            e["official_check"] = normalize_enum(e["official_check"], CHECK_WORDS, CHECK_CANON)
+            e["official_check"] = normalize_check(e["official_check"])
         if e.get("channel") is not None:
             e["channel"] = normalize_enum(e["channel"], CHANNEL_WORDS, CHANNEL_CANON)
         if e.get("read_scope") is not None:
@@ -540,7 +559,11 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool) -> 
         if len(q) < 8:
             continue
         if q in seen and seen[q] != entry["id"]:
-            rep.warn("R14", f"摘录被 {seen[q]} 与 {entry['id']} 同时使用，可能不是各自原文")
+            msg = f"摘录被 {seen[q]} 与 {entry['id']} 同时使用，可能不是各自原文"
+            if strict:
+                rep.error("R14", f"严格模式：{msg}")
+            else:
+                rep.warn("R14", msg)
         else:
             seen[q] = entry["id"]
 

@@ -17,6 +17,8 @@ python3 tools/citation_lint.py tests/fixtures/<名>.md [--ledger tests/fixtures/
 | `strict-missing-effect.md/.json` | `--ledger … --strict` | 1 | R16 | 严格模式：用于结论却缺「规范效力」报错 |
 | `boilerplate-quote.md/.json` | `--ledger …` | 1 | R13 | 摘录只有「本院认为」，任何判决都有，无法证伪 |
 | `reused-quote.md/.json` | `--ledger …` | 0（警告） | R14 | 同一摘录被两个不同结论复用 |
+| `reused-quote.md/.json` | `--ledger … --strict` | 1 | R14 | 严格模式下摘录复用升为错误 |
+| `commercial-unverified-variants.md/.json` | `--ledger …` | 0（警告） | R0 | `未核（仅商业库或转载）`／`未经核实`／`未能核实`／`尚未核` 都归为未核，不得报 R18 |
 | `future-reread.md/.json` | `--ledger …` | 1 | R15 | 回读日期写成 2099 年，晚于运行当天 |
 | `offline-draft.md` | `--mode offline` | 0 | — | 合规离线草稿 |
 | `offline-draft-negative.md` | `--mode offline` | 0 | — | 「不是可交付稿」「无一条已核实」不算声称 |
