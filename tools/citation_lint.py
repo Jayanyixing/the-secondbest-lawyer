@@ -157,6 +157,8 @@ OFFICIAL_SITES: list[tuple[str, str | None]] = [
     ("www.gov.cn", "/zhengce/xxgk/gjgzk/"),
     ("bjrd.gov.cn", None),
     ("beijing.gov.cn", None),
+    ("bjcourt.gov.cn", None),
+    ("spp.gov.cn", None),
 ]
 URL_RE = re.compile(r"https?://[^\s，。；、）)\]】>\"']+")
 HOST_RE = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:cn|com|net|org|gov|edu|io|hk|tw|info)")

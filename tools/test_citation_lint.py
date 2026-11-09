@@ -225,6 +225,10 @@ def main() -> int:
     _chk("[R18]" not in out, "官方站点导出件不得报 R18", fails)
     _chk(cl2.check_allowed_for_channel("已核（与官方原文一致）", "user_export", "https://www.pkulaw.com/x.pdf") is False,
          "商业库导出件写已核仍应被拒", fails)
+    code, out = run_fixture("export-from-bjcourt.md", "export-from-bjcourt.json")
+    _chk(code == 0 and "[R18]" not in out, f"北京法院网导出件三段式应通过，实际 {code}", fails)
+    code, out = run_fixture("export-from-commercial.md", "export-from-commercial.json")
+    _chk(code == 1 and "[R18]" in out, f"商业库导出件写已核仍应报 R18，实际 {code}", fails)
 
     # 渠道写「官方」但出处域名不在白名单 → R18；用户导出件不受域名约束
     _chk(cl2.official_domain_ok("flk.npc.gov.cn") , "官方域名应通过", fails)
@@ -237,9 +241,10 @@ def main() -> int:
     _chk(cl2.official_domain_ok("https://www.gov.cn/zhengce/xxgk/gjgzk/x.html") is True, "国家规章库路径应放行", fails)
     _chk(cl2.official_domain_ok("https://www.gov.cn/zhengce/content/2024/x.html") is False, "www.gov.cn 非规章库路径应拒", fails)
     _chk(cl2.official_domain_ok("https://www.beijing.gov.cn/zhengce/x.html") is True, "北京市政府门户应放行", fails)
-    _chk(cl2.official_domain_ok("https://www.spp.gov.cn/x.html") is False, "最高检站点仍不在白名单", fails)
+    _chk(cl2.official_domain_ok("https://www.spp.gov.cn/x.html") is True, "最高检站点已纳入白名单（经用户确认，原排除断言有意反转）", fails)
     _chk(cl2.official_domain_ok("https://www.moj.gov.cn/x.html") is False, "司法部站点仍不在白名单", fails)
-    _chk(cl2.official_domain_ok("https://bjcourt.gov.cn/x.html") is False, "北京法院网仍不在白名单", fails)
+    _chk(cl2.official_domain_ok("https://bjcourt.gov.cn/x.html") is True, "北京法院网已纳入白名单（原排除断言有意反转）", fails)
+    _chk(cl2.official_domain_ok("https://notspp.gov.cn/x.html") is False, "近名域名不得因新白名单放行", fails)
     _chk(cl2.official_domain_ok("https://sf.beijing.gov.cn/x.html") is True, "北京市司法局子域应放行（beijing.gov.cn 子域）", fails)
     _chk(cl2.official_domain_ok("https://rsj.beijing.gov.cn/zhengce/x.html") is True, "北京市人社局子域应放行", fails)
     code, out = run_fixture("official-nonwhitelist.md", "official-nonwhitelist.json")
