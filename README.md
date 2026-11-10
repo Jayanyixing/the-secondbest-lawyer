@@ -50,6 +50,7 @@ python3 tools/build.py      # 输出到 dist/，无第三方依赖
 ## 目录
 
 ```text
+AGENTS.md                        仓库根目录入口（供 Codex／Cursor／Windsurf 等直接读根目录的宿主加载）
 the-secondbest-lawyer/
 ├── SKILL.md                     入口：定位、加载方式、工作五则、路由、期限口径、双模式复核
 ├── AGENTS.md                    给「读 AGENTS.md 但不认技能目录」的 agent 的入口
@@ -88,16 +89,16 @@ the-secondbest-lawyer/
 └── tests/fixtures/              解析器测试数据
 templates/                       文书 JSON 样例、取卡模板与批次、弃卡清单、检索验收题
 tools/
-├── lawdb.py                     法条库＋结案卡片：导入／检索／按条取文／哈希校验／card-*
-├── citation_lint.py             引用校验器（21 条规则）
+├── lawdb.py                     法条库＋结案卡片：导入／search 一键聚合检索／query／article／verify／card-*
+├── citation_lint.py             引用校验器（21 条规则），支持 --verify-db 本地库原文交叉核验
 ├── card_health.py               条号错位、跨卡矛盾、占位值、cause↔tags 一致性
 ├── feedback.py / improve.py     失败信号记录与改进提案（只提不改库）
 ├── retrieval_check.py           检索验收回归（data/retrieval-cases.json）
 ├── lawdiff.py                   官方件 vs 库内文本逐条比对
 ├── ocr_pdf.js                   扫描件 OCR（macOS Vision，约 1–2 秒/页）
-├── docgen.py                    直出 docx（起诉状／证据目录／风险告知书，零依赖）
+├── docgen.py                    直出 docx（起诉状／答辩状／财产保全申请书／证据目录／风险告知书，零依赖）
 ├── build.py                     生成单文件版与技能包
-├── check_all.py                 一键门禁：单测／探针／评测／哈希／构建／防泄露
+├── check_all.py                 一键门禁：单测／探针／评测／哈希／卡片体检／构建／全仓防泄露与脱敏扫描
 ├── install_hooks.sh             启用 .githooks/pre-push 本地快检
 ├── eval_score.py                评测分数汇总
 ├── eval_cases.py                基准集跑分（eval/cases，金标＋反例判别力自检）
@@ -116,6 +117,7 @@ dist/                            构建产物（单文件 lite/full + zip）
 ```bash
 python3 tools/citation_lint.py 代理意见.md --ledger citations.json
 python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
+python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --verify-db   # 对照本地法条库与卡片库交叉核验摘录原文
 ```
 
 底稿可以是 JSON（结构见 [`handoff.md`](the-secondbest-lawyer/references/handoff.md)）或 markdown 表格（表头含“编号／类型／案号／定位／读取范围／回读／官方复核”即可）。交付首页写「官方复核未核 N 条」；正式诉讼材料的未核条目单独进「提交前须核」清单——这是警告口径，不阻断交付。
@@ -135,7 +137,7 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 
 | 规则 | 抓什么 |
 |---|---|
-| R1 | 未登记案号、占位案号、未登记指导案例／入库编号 |
+| R1 | 未登记法院案号或仲裁案号、占位案号、未登记指导案例／入库编号 |
 | R2 | 底稿缺来源、定位、读取范围或复核状态 |
 | R3 | 摘要／标题级材料被用来支撑正文 |
 | R4 | 把未确认生效的裁判写成生效判决 |
@@ -177,7 +179,8 @@ python3 tools/citation_lint.py 代理意见.md --ledger 底稿.md --mode review
 
 ```bash
 python3 tools/lawdb.py seed                   # 按 data/manifest.json 批量入库
-python3 tools/lawdb.py query 公告期间 期限     # 中文全文检索（FTS5 trigram，多词 AND）
+python3 tools/lawdb.py search 违约金 损失     # 一键同时检索本地法条库 + 结案卡片库
+python3 tools/lawdb.py query 公告期间 期限    # 中文全文检索（FTS5 trigram，多词 AND）
 python3 tools/lawdb.py article 中华人民共和国民法典 第五百八十五条
 python3 tools/lawdb.py stats                  # 部数、条数、按部明细
 python3 tools/lawdb.py verify                 # 比对磁盘文件哈希（当前 84/84 一致）
@@ -199,12 +202,14 @@ python3 tools/lawdb.py import 民法典.docx --name 中华人民共和国民法�
 
 ## 交付物：直接出 Word
 
-律师要交的是 .docx，不是 Markdown。`tools/docgen.py` 零依赖生成三种文书：
+律师要交的是 .docx，不是 Markdown。`tools/docgen.py` 零依赖生成五种高频文书：
 
 ```bash
-python3 tools/docgen.py complaint --input templates/complaint.sample.json --out 起诉状.docx
-python3 tools/docgen.py evidence  --input templates/evidence.sample.json  --out 证据目录.docx
-python3 tools/docgen.py risk      --input templates/risk.sample.json      --out 风险告知书.docx
+python3 tools/docgen.py complaint    --input templates/complaint.sample.json --out 起诉状.docx
+python3 tools/docgen.py defense      --input 答辩状.json                     --out 答辩状.docx
+python3 tools/docgen.py preservation --input 保全申请.json                   --out 财产保全申请书.docx
+python3 tools/docgen.py evidence     --input templates/evidence.sample.json  --out 证据目录.docx
+python3 tools/docgen.py risk         --input templates/risk.sample.json      --out 风险告知书.docx
 ```
 
 生成后脚本会提示还有几处 `【待补】` 占位符——**没替换完不许交出去**。证据目录自动排成表格（序号／名称／证明内容／页数／原件或复印件／备注）。
@@ -354,12 +359,13 @@ python3 tools/eval_cases.py --case E03 --answer 某份产出.md   # 判一份真
 ## 自检：改完先跑一遍
 
 ```bash
-python3 tools/check_all.py           # 一键全量门禁，14 项全绿（CI 跑这个）
+python3 tools/check_all.py           # 一键全量门禁，15 项全绿（CI 跑这个）
 python3 tools/check_all.py --fast    # 快速门禁，11 项；pre-push 钩子用
 python3 tools/test_citation_lint.py   # 引用校验器回归，160/160 条断言（含对抗样例，见 tests/fixtures/EXPECTATIONS.md）
 python3 tools/test_tender.py          # 投标四件套回归，7/7
 python3 tools/test_lawdb.py           # 条号归一（38／第三十八条／133之一…），9/9
 python3 tests/test_lawdb_bugs.py      # lawdb 切条／简称／短同义词 12 项探针，12/12
+python3 tests/test_lint_docgen_bugs.py      # 引用校验与 docgen 边界 11 项探针，11/11
 python3 tools/test_lawdiff.py         # 法条逐字比对（标题粘连 vs 实质差异），5/5
 python3 tests/test_remaining_tools_bugs.py  # 构建/比对/投标 10 项回归探针，10/10
 python3 tests/test_tender_eval_bugs.py      # 投标四件套/eval 16 项回归探针，16/16
@@ -369,7 +375,7 @@ python3 tools/card_health.py          # 条号错位、跨卡矛盾、占位值�
 python3 tools/lawdb.py verify         # 法条文件哈希，84/84
 ```
 
-`check_all.py` 是全量入口：核心四测、`tests/test_*.py` 探针、12 案判别力、法条哈希、检索回归、临时试构建，以及分发包与受跟踪文件的敏感条目扫描。`--fast` 跳过试构建与数据校验，供 `git push` 前使用。首次克隆后运行 `bash tools/install_hooks.sh` 启用 pre-push 快检；GitHub Actions 在 push main / PR 时跑全量门禁（`.github/workflows/ci.yml`）。
+`check_all.py` 是全量入口：核心四测、`tests/test_*.py` 探针、12 案判别力、法条哈希、检索回归、卡片库体检、临时试构建，以及分发包与受跟踪文件的敏感条目及未脱敏案号／主体扫描。`--fast` 跳过试构建与数据校验，供 `git push` 前使用。首次克隆后运行 `bash tools/install_hooks.sh` 启用 pre-push 快检；GitHub Actions 在 push main / PR 时跑全量门禁（`.github/workflows/ci.yml`）。
 
 测试计数口径：一条断言＝一次 `_chk()` 调用（同一断言换个 fixture 再跑算另一条），所以数字会随样例增加而涨；`test_citation_lint.py` 的输出末尾会打印断言总数，与本节数字一致。
 
