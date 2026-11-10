@@ -38,7 +38,15 @@ QUAL_KW = ["资质", "营业执照", "许可证", "执业许可", "业绩", "社
 REQ_KW = ["应当", "必须", "须", "不得", "不允许", "不接受", "要求", "应提供",
           "应提交", "需提供", "承诺"]
 
-ID_RE = re.compile(r"^\s*(?:[（(]?([0-9]{1,3})[）)．.、]|([一二三四五六七八九十百零〇两]{1,4})[、．.]|(第[一二三四五六七八九十百零〇两\d]{1,5}条))")
+ID_RE = re.compile(
+    r"^\s*(?:"
+    r"[（(]?([0-9]{1,3}(?:\.[0-9]{1,3})+)[）)．.、\s]"
+    r"|[（(]?([0-9]{1,3})[）)．.、]"
+    r"|[（(]([一二三四五六七八九十百零〇两]{1,4})[）)][、．.]?"
+    r"|([一二三四五六七八九十百零〇两]{1,4})[、．.]"
+    r"|(第[一二三四五六七八九十百零〇两\d]{1,5}[条项款])"
+    r")"
+)
 SHORT_STRONG_KW = ("★", "▲", "实质性", "不得", "禁止", "严禁", "无效", "废标", "不予受理")
 
 
@@ -48,9 +56,9 @@ def docx_text(path: Path) -> str:
             xml = z.read("word/document.xml").decode("utf-8", "ignore")
         except KeyError:
             return ""
-    xml = re.sub(r"</w:p>", "\n", xml)
+    xml = re.sub(r"</w:p>|<w:(?:br|cr)\b[^>]*/?>", "\n", xml)
     xml = re.sub(r"<[^>]+>", "", xml)
-    return xml.replace("&amp;", "&")
+    return xml.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
 
 
 def read_text(path: Path) -> str:
@@ -120,11 +128,12 @@ def extract(path: Path) -> list[dict]:
         if kind == "其他" and not any(k in line for k in REQ_KW):
             continue
         m = ID_RE.match(line.lstrip("★▲☆△□■*· "))
+        req_id = next((g for g in m.groups() if g), "").strip() if m else ""
         rows.append({
             "文件": path.name,
             "行号": lineno,
-            "采购编号": (m.group(1) or m.group(2) or m.group(3) or "").strip() if m else "",
-            "类型": classify(line),
+            "采购编号": req_id,
+            "类型": kind,
             "要求原文": line,
         })
     return rows

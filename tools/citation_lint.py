@@ -232,18 +232,22 @@ def has_official_site(text: str) -> bool:
 
 
 def check_allowed_for_channel(raw, channel: str = "", source: str = "") -> bool:
-    """非官方渠道的官方复核栏：只接受未核词表、不适用或留空。
+    """非官方渠道的官方复核栏：只接受未核／待核类写法、不适用或留空。
 
-    不认识的肯定写法（「已比对一致」「已验证」「基本核实」）一律不许出现，
-    否则调用方会在 R18 报错——渠道拿不出官方原文，就没有资格写「已核」。
+    - 词表内未核写法、留空、不适用：放行；
+    - 词表外但明确是否定或待核（「未经官方核实」「核对中」「待核」）：放行——
+      它们没有声称已核，归一时会记未核并进 R0 提示，不该再报 R18；
+    - 官方站点下载的导出件：出处写明官方链接，且复核栏用**词表内**已核写法才放行；
+    - 其余（「已比对一致」「已验证」「基本核实」等肯定写法）一律拒绝，调用方报 R18。
     """
     if raw is None:
         return True
     v = str(raw).strip()
     if v in CHECK_ALLOWED_FOREIGN:
         return True
-    # 官方站点下载的导出件：出处写明官方链接时才可记「已核」
-    if channel == "user_export" and has_official_site(source):
+    if not claims_official_verified(v) and (CHECK_NEG_RE.search(v) or CHECK_PENDING_RE.search(v)):
+        return True
+    if channel == "user_export" and has_official_site(source) and v in CHECK_VERIFIED_TEXT:
         return True
     return False
 
@@ -272,6 +276,8 @@ def normalize_enum(raw, words, canon: set[str], default: str = "unknown") -> str
     v = str(raw).strip()
     if v in canon:
         return v
+    if v.lower() in canon:
+        return v.lower()
     return pick(words, v, default)
 
 
@@ -302,9 +308,12 @@ BOILERPLATE_QUOTES = [
 ]
 
 ABSOLUTE_CLAIMS = [
-    "无任何风险", "没有任何风险", "无任何债务", "没有任何诉讼", "无任何诉讼",
+    "无任何风险", "没有任何风险", "不存在任何风险",
+    "无任何债务", "没有任何债务", "不存在任何债务",
+    "无任何诉讼", "没有任何诉讼", "不存在任何诉讼",
     "肯定胜诉", "必然胜诉", "保证胜诉", "一定能赢", "百分之百", "保证回款", "保证中标",
 ]
+EFFECT_CLAIMS = ["生效判决", "生效裁判", "终审判决", "已生效"]
 VAGUE_CITATIONS = [
     "根据相关规定", "根据有关法律规定", "依照有关规定", "相关法律法规规定",
     "司法实践普遍认为", "有判例支持", "某法院认为", "司法实践中一般认为",
@@ -314,7 +323,10 @@ VAGUE_CITATIONS = [
 DEADLINE_WORDS = ["截止", "届满", "到期", "上诉期", "答辩期", "举证期", "最后一日", "过期", "时效", "最迟"]
 QUOTED_SPAN_RE = re.compile(r"「[^」]*」|“[^”]*”|\"[^\"]*\"|『[^』]*』")
 DATE_RE = re.compile(r"\d{4}\s*[-/年]\s*\d{1,2}\s*[-/月]\s*\d{1,2}\s*日?|\d{4}-\d{2}-\d{2}")
-CASE_NO_RE = re.compile(r"[（(]\s*(?:19|20)\d{2}\s*[）)][^\s，。；：、（）()]{2,32}?号")
+CASE_NO_RE = re.compile(
+    r"[（(]\s*(?:19|20)\d{2}\s*[）)][^\s，。；：、（）()]{2,32}?号"
+    r"|[\u4e00-\u9fa5]{2,12}仲[\u4e00-\u9fa5]{0,3}字?\s*[［\[（(〔]\s*(?:19|20)\d{2}\s*[］\]）)〕]\s*第?\s*[\dXxＸｘ×＊*]+\s*号"
+)
 GUIDE_NO_RE = re.compile(r"指导案例\s*\d+\s*号|入库编号\s*[\w\-]{4,}")
 REREAD_RE = re.compile(r"已回读[（(](\d{4}-\d{2}-\d{2}|日期待补)[）)]")
 TAG_RE = re.compile(r"[\[〔【]\s*([NCSM]-\d{1,3})\s*[\]〕】]|(?<![\w\-])([NCSM]-\d{1,3})(?![\w\-])")
@@ -594,23 +606,24 @@ def load_ledger_md(path: Path) -> list[dict]:
             {
                 "id": norm_id(ident),
                 "type": get("类型", "类别"),
-                "number": get("案号", "文号", skip_id=True) or get("编号", skip_id=True),
+                "number": get("案号", "文号", "条号", "法条", skip_id=True) or get("编号", skip_id=True),
                 "name": get("名称", "案名", "全称"),
                 "court": get("法院", "机关"),
                 "date": get("裁判日期", "日期", "施行"),
-                # 渠道只看单元格内容：表头列名里有「官方复核」就会带「官方」二字，
-                # 拼进去会让任何渠道都被 pick() 判成 official
-                "channel": pick([("官方", "official"), ("商业", "commercial"), ("导出", "user_export"), ("口述", "oral")], get("来源渠道", "来源", "渠道"), "unknown"),
+                # 枚举列用 normalize_enum() 归一：中文词与英文值（official／full／effective）
+                # 都认；若只用认中文的 pick() 兜底，英文值会被抹成 unknown。渠道只读
+                # 「来源渠道／来源／渠道」列的单元格，不拼表头，免得「官方复核」列名污染渠道。
+                "channel": normalize_enum(get("来源渠道", "来源", "渠道"), CHANNEL_WORDS, CHANNEL_CANON),
                 # 「定位」与「出处／链接」分列时，两个字段都要读，否则官方 URL 会被丢掉
                 "location": get("定位", "页码", "页段", "条款") or get("出处", "链接", "网址", "URL", "url"),
                 "source": get("出处", "链接", "网址", "URL", "url"),
-                "read_scope": pick(SCOPE_WORDS, get("读取范围", "范围"), "unknown"),
+                "read_scope": normalize_enum(get("读取范围", "范围"), SCOPE_WORDS, SCOPE_CANON),
                 "quote": get("摘录", "原文"),
                 "reread": get("回读"),
                 # 复核状态保留原值交给 normalize_entries()→normalize_check()：pick() 只做子串包含，
                 # 「未见已核记录」「尚未完成已核比对」会先命中「已核」被判 verified，架空 CHECK_NEG_RE
                 "official_check": get("官方复核", "复核") or "unknown",
-                "effectiveness": pick(EFFECT_WORDS, get("生效", "后续"), "unknown"),
+                "effectiveness": normalize_enum(get("生效", "后续"), EFFECT_WORDS, EFFECT_CANON),
                 "norm_status": normalize_norm_status(get("规范效力")),
                 "apply_time": get("适用时点"),
             }
@@ -652,6 +665,8 @@ def load_ledger_inline(path: Path) -> list[dict]:
         quote_at = next((i for i, h in enumerate(header) if "摘录" in h or "原文" in h), None)
         scope_at = next((i for i, h in enumerate(header) if "读取范围" in h), None)
         reread_at = next((i for i, h in enumerate(header) if "回读" in h), None)
+        norm_at = next((i for i, h in enumerate(header) if "规范效力" in h), None)
+        apply_at = next((i for i, h in enumerate(header) if "适用时点" in h), None)
         for _, cells in t["rows"]:
             first = cell_at(cells, 0).strip()
             m = INLINE_ID_CELL_RE.match(first)
@@ -701,6 +716,8 @@ def load_ledger_inline(path: Path) -> list[dict]:
                     "reread": cell_at(cells, reread_at) if reread_at is not None else "",
                     "official_check": "unknown",
                     "effectiveness": "unknown",
+                    "norm_status": normalize_norm_status(cell_at(cells, norm_at)) if norm_at is not None else "unknown",
+                    "apply_time": cell_at(cells, apply_at) if apply_at is not None else "",
                     "inline": True,
                 }
             )
@@ -842,8 +859,70 @@ def check_conclusion_sources(rep: "Report", tables: list[dict]) -> None:
                 break
 
 
+def _verify_ledger_against_db(ledger: list[dict], rep: Report) -> None:
+    """对照本地 law.sqlite 与 cards.sqlite 核验底稿摘录是否与库内原文逐字一致。"""
+    import sqlite3
+    root = Path(__file__).resolve().parent.parent
+    law_db = root / "data" / "law.sqlite"
+    cards_db = root / "data" / "cards.sqlite"
+    try:
+        sys.path.insert(0, str(root / "tools"))
+        import lawdb as _lawdb
+    except Exception:
+        return
+
+    law_conn = sqlite3.connect(law_db) if law_db.exists() else None
+    card_conn = sqlite3.connect(cards_db) if cards_db.exists() else None
+    try:
+        for entry in ledger:
+            eid = str(entry.get("id") or "")
+            q = norm_quote(entry.get("quote") or "")
+            if len(q) < 8:
+                continue
+            ref_str = " ".join(
+                str(entry.get(k) or "") for k in ("number", "name", "location", "source")
+            )
+            if eid.startswith("N-") and law_conn is not None:
+                m_law = re.search(r"《([^》]{2,40})》", ref_str)
+                m_art = re.search(r"(第[零一二三四五六七八九十百千万\d]+条(?:之[一二三四五六七八九十\d]+)?)", ref_str)
+                if m_law and m_art:
+                    names = _lawdb.resolve_laws(law_conn, m_law.group(1))
+                    art_no = _lawdb.normalize_article_no(m_art.group(1))
+                    if names:
+                        ph = ",".join("?" * len(names))
+                        rows = law_conn.execute(
+                            f"SELECT a.text, l.name FROM articles a JOIN laws l ON l.id=a.law_id "
+                            f"WHERE l.name IN ({ph}) AND a.article_no=?",
+                            (*names, art_no),
+                        ).fetchall()
+                        if rows and not any(q in norm_quote(r[0]) for r in rows):
+                            rep.error(
+                                "R12",
+                                f"底稿 {eid} 摘录与本地法条库《{rows[0][1]}》{art_no} 原文不符：{entry.get('quote', '')[:30]}",
+                            )
+            elif eid.startswith("C-") and card_conn is not None:
+                m_cno = CASE_NO_RE.search(ref_str)
+                if m_cno:
+                    cno = m_cno.group(0).strip()
+                    rows = card_conn.execute(
+                        "SELECT quote FROM cards WHERE case_no=?", (cno,)
+                    ).fetchall()
+                    if rows and not any(
+                        q in norm_quote(r[0]) or norm_quote(r[0]) in q for r in rows if r[0]
+                    ):
+                        rep.warn(
+                            "R12",
+                            f"底稿 {eid}（{cno}）摘录与本地卡片库同案号摘录不一致，请确认是否取自同案其他段落",
+                        )
+    finally:
+        if law_conn is not None:
+            law_conn.close()
+        if card_conn is not None:
+            card_conn.close()
+
+
 def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
-         contract_path: Path | None = None) -> Report:
+         contract_path: Path | None = None, verify_db: bool = False) -> Report:
     rep = Report()
     text = body_path.read_text(encoding="utf-8")
     lines = text.splitlines()
@@ -920,8 +999,10 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
             if entry.get("read_scope") in WEAK_SCOPES and not in_todo:
                 rep.error("R3", f"第 {idx} 行用「{entry.get('read_scope')}」级材料 [{tag}] 支撑正文（所在小节：{heading or '开头'}）")
 
-            # R4 效力状态
-            if entry.get("effectiveness") not in ("effective",) and re.search(r"生效判决|生效裁判|终审判决|已生效", line):
+            # R4 效力状态（同一分句内被否定的「不能称终审判决」不算宣称）
+            if entry.get("effectiveness") not in ("effective",) and any(
+                affirms_claim(line, w) for w in EFFECT_CLAIMS
+            ):
                 rep.warn("R4", f"第 {idx} 行宣称生效，但 [{tag}] 的生效状态为 {entry.get('effectiveness')}")
 
             # R11 支撑结论的条目必须带摘录
@@ -978,9 +1059,9 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
             if not re.search(r"已核|〔假设|\[假设|待核|未核", probe):
                 rep.error("R5", f"第 {idx} 行给出期限日期但没有状态标签（已核／〔假设〕／待核）：{line.strip()[:60]}")
 
-        # R6 绝对化措辞
+        # R6 绝对化措辞（「不得承诺保证胜诉」「不能写成『不存在任何债务』」是否定，不算结论）
         for phrase in ABSOLUTE_CLAIMS:
-            if phrase in line:
+            if phrase in line and affirms_claim(line, phrase):
                 rep.error("R6", f"第 {idx} 行出现绝对化结论「{phrase}」")
 
         # R7 无据引用
@@ -1015,7 +1096,12 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
     # R16 规范类条目缺效力与适用时点；效力未确认却用于结论
     for entry in ledger:
         eid = entry.get("id") or ""
-        if entry.get("inline") or not eid.startswith("N"):
+        if not eid.startswith("N"):
+            continue
+        if entry.get("inline"):
+            # 内联表字段不全，缺字段只在下方汇总提示；但登记了「未确认」仍用于结论，照样是错误
+            if entry.get("norm_status") == NORM_UNCONFIRMED and eid in used_ids:
+                rep.error("R16", f"规范类条目 {eid} 的规范效力为「未确认」，却用于正文结论；先核效力或降为待取正文")
             continue
         missing = []
         if entry.get("norm_status") in (None, "", "unknown"):
@@ -1154,6 +1240,9 @@ def lint(body_path: Path, ledger_path: Path | None, mode: str, strict: bool,
             if affirms_claim(text, word):
                 rep.error("R17", f"离线稿不得出现「{word}」：离线只能出草稿")
 
+    if verify_db and ledger:
+        _verify_ledger_against_db(ledger, rep)
+
     return rep
 
 
@@ -1187,6 +1276,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--mode", choices=["self", "review", "offline"], default="self", help="自查／独立复核／离线草稿模式")
     ap.add_argument("--strict", action="store_true", help="未回读按错误处理")
     ap.add_argument("--contract", type=Path, help="原合同文件（文本），用于核对替换条款引用的条款号")
+    ap.add_argument("--verify-db", action="store_true", help="对照本地法条库与卡片库核验底稿摘录原文")
     ap.add_argument("--json", action="store_true", help="以 JSON 输出")
     args = ap.parse_args(argv)
 
@@ -1202,7 +1292,7 @@ def main(argv: list[str]) -> int:
     if not args.ledger:
         print("提示：未提供 --ledger，只做措辞与标签检查（无法校验案号来源）。", file=sys.stderr)
 
-    rep = lint(args.body, args.ledger, args.mode, args.strict, args.contract)
+    rep = lint(args.body, args.ledger, args.mode, args.strict, args.contract, args.verify_db)
     if args.json:
         print(json.dumps({"errors": rep.errors, "warnings": rep.warnings}, ensure_ascii=False, indent=2))
     else:

@@ -38,7 +38,7 @@ def main(argv: list[str]) -> int:
         print(f"找不到 {args.csv_path}", file=sys.stderr)
         return 2
 
-    rows = list(csv.DictReader(args.csv_path.open(encoding="utf-8")))
+    rows = list(csv.DictReader(args.csv_path.open(encoding="utf-8-sig")))
     rows = [r for r in rows if (r.get("case_id") or "").strip()]
     if not rows:
         print("没有有效数据行", file=sys.stderr)
@@ -46,7 +46,7 @@ def main(argv: list[str]) -> int:
 
     blocked, scored = [], []
     for r in rows:
-        if str(r.get("blocker", "0")).strip() in ("1", "true", "yes", "Y"):
+        if str(r.get("blocker", "0")).strip().lower() in ("1", "true", "yes", "y", "是"):
             blocked.append(r["case_id"])
         else:
             scored.append(r)

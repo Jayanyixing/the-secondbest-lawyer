@@ -60,12 +60,20 @@ def _() -> None:
         (tmp / "data" / "cards.sqlite").write_text("masked", "utf-8")
         (tmp / "data" / "cards.full.sqlite").write_text("secret", "utf-8")
         (tmp / "data" / "cards.full.json").write_text("{}", "utf-8")
+        (tmp / "data" / "credits.json").write_text("{}", "utf-8")
+        (tmp / "eval" / "sealed").mkdir(parents=True, exist_ok=True)
+        (tmp / "eval" / "sealed" / "C01.md").write_text("sealed", "utf-8")
+        (tmp / "templates" / "BULK-GENERATION-PROMPT.md").write_text("prompt", "utf-8")
         for suffix in ("-wal", "-shm", "-journal"):
             (tmp / "data" / f"cards.sqlite{suffix}").write_text("txn", "utf-8")
         (tmp / "dist").mkdir()
         target = build.build_zip(tmp / "dist")
         names = zipfile.ZipFile(target).namelist()
-        bad = [n for n in names if "cards.full" in n or n.endswith(("-wal", "-shm", "-journal"))]
+        bad = [
+            n for n in names
+            if "cards.full" in n or n.endswith(("-wal", "-shm", "-journal"))
+            or "credits.json" in n or "sealed/" in n or "BULK-GENERATION-PROMPT" in n
+        ]
         assert not bad, f"分发包带了敏感文件：{bad}"
         assert "data/cards.sqlite" in names, "脱敏库应正常入包"
     finally:
@@ -156,8 +164,10 @@ def _() -> None:
         a.write_text(body, "utf-8")
         b.write_text(body, "utf-8")
         r = run([str(TOOLS / "lawdiff.py"), str(a), str(b), "--only", "9"])
+        r_miss = run([str(TOOLS / "lawdiff.py"), str(a), str(b), "--only", "999"])
     assert "A（官方）：1 条" in r.stdout, r.stdout
     assert r.returncode == 0, r.stdout + r.stderr
+    assert r_miss.returncode == 1, "两边均不存在的锚点条号不应判为一致通过"
 
 
 @case("lawdiff：抽查后最大条号同步收窄")

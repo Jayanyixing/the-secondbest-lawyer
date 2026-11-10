@@ -120,9 +120,11 @@ def main(argv: list[str]) -> int:
             return 2
     if args.only:
         only = [x.strip() for x in args.only.split(",") if x.strip()]
+    missing_anchors: list[str] = []
     if only:
         # 锚点与 --only 都可能写成「9」「第9条」「第九条」，统一成库里的写法再比对
         only = [normalize_article_no(x) for x in only]
+        missing_anchors = [x for x in only if x not in a and x not in b]
         a = {k: v for k, v in a.items() if k in only}
         b = {k: v for k, v in b.items() if k in only}
         a_nums = sorted({cn2int(k.lstrip("第").split("条")[0]) for k in a})
@@ -130,6 +132,12 @@ def main(argv: list[str]) -> int:
         print(f"抽查模式：{len(only)} 个锚点条号")
     print(f"A（官方）：{len(a)} 条，最大 {a_nums[-1] if a_nums else 0}")
     print(f"B（库内）：{len(b)} 条，最大 {b_nums[-1] if b_nums else 0}")
+
+    if not a and not b:
+        print("\n结论：两边均未切出任何可比条文 ✗")
+        return 1
+    if missing_anchors:
+        print(f"\n两边均缺锚点：{len(missing_anchors)} 条 → {', '.join(missing_anchors[:8])}")
 
     only_a = [n for n in a if n not in b]
     only_b = [n for n in b if n not in a]
@@ -154,13 +162,13 @@ def main(argv: list[str]) -> int:
             print(f"\n  {no}")
             print(f"    官方：…{x}…")
             print(f"    库内：…{y}…")
-    elif not only_a and not only_b and not glue:
+    elif not only_a and not only_b and not glue and not missing_anchors:
         print("\n结论：条号与内容完全一致 ✓")
         return 0
 
     identical = len([n for n in a if n in b and a[n] == b[n]])
     print(f"\n一致 {identical} 条｜标题粘连 {len(glue)} 条｜实质不一致 {len(changed)} 条｜单边 {len(only_a) + len(only_b)} 条")
-    return 0 if not changed and not only_a and not only_b else 1
+    return 0 if not changed and not only_a and not only_b and not missing_anchors else 1
 
 
 if __name__ == "__main__":

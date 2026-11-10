@@ -39,6 +39,10 @@ def parse_rows(text: str) -> list[dict]:
         target = row.get("对象", "")
         due = row.get("下次到期", "")
         if target and DATE_RE.fullmatch(due or ""):
+            try:
+                datetime.strptime(due, "%Y-%m-%d")
+            except ValueError:
+                continue
             rows.append({"target": target, "due": due})
     return rows
 
@@ -53,7 +57,11 @@ def main(argv: list[str]) -> int:
         print("找不到 MAINTENANCE.md", file=sys.stderr)
         return 2
 
-    today = datetime.strptime(args.today, "%Y-%m-%d").date() if args.today else date.today()
+    try:
+        today = datetime.strptime(args.today, "%Y-%m-%d").date() if args.today else date.today()
+    except ValueError:
+        print(f"日期格式错误：{args.today}（应为 YYYY-MM-DD）", file=sys.stderr)
+        return 2
     rows = parse_rows(MAINT.read_text(encoding="utf-8"))
     if not rows:
         print("MAINTENANCE.md 里没有解析到复查表", file=sys.stderr)

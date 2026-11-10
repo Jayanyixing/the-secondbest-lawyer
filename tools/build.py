@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import re
 import subprocess
 import sys
@@ -187,6 +188,47 @@ def build_flat(order: list[str], variant: str) -> str:
     return "\n".join(chunks)
 
 
+# 无论 .gitignore 是否存在、是否在 Git 工作树里，这些条目都不进公开包：
+# 业绩库含客户名与金额，sealed/ 是盲评封存答案，BULK 提示词是本地工作稿。
+ALWAYS_EXCLUDE = (
+    "data/credits.json",
+    "eval/sealed/",
+    "eval/batch2/sealed/",
+    "templates/BULK-GENERATION-PROMPT.md",
+)
+
+
+def load_ignore_patterns(root: Path) -> list[str]:
+    """读 .gitignore（只支持本仓库用到的子集：注释、目录/、带 / 的路径、通配名）。"""
+    pats = list(ALWAYS_EXCLUDE)
+    gi = root / ".gitignore"
+    if gi.is_file():
+        for line in gi.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and not line.startswith("!"):
+                pats.append(line.lstrip("/"))
+    return pats
+
+
+def is_ignored(rel: str, patterns: list[str]) -> bool:
+    """rel 为相对仓库根的 posix 路径。"""
+    parts = rel.split("/")
+    for pat in patterns:
+        if pat.endswith("/"):
+            d = pat.rstrip("/")
+            if "/" in d:
+                if rel.startswith(d + "/"):
+                    return True
+            elif d in parts[:-1]:
+                return True
+        elif "/" in pat:
+            if fnmatch.fnmatchcase(rel, pat):
+                return True
+        elif any(fnmatch.fnmatchcase(p, pat) for p in parts):
+            return True
+    return False
+
+
 def build_zip(out: Path) -> Path:
     target = out / "the-secondbest-lawyer.zip"
     include_dirs = ["the-secondbest-lawyer", "tools", "eval", "data", "templates"]
@@ -196,6 +238,7 @@ def build_zip(out: Path) -> Path:
         ".sqlite-wal", ".sqlite-shm", ".sqlite-journal",
         ".db-wal", ".db-shm", ".db-journal",
     )
+    ignore = load_ignore_patterns(ROOT)
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
         for folder in include_dirs:
             base = ROOT / folder
@@ -206,6 +249,9 @@ def build_zip(out: Path) -> Path:
                     continue
                 # 隐藏目录（.workbuddy、.git 等）是本地工作数据，不进分发包
                 if any(part.startswith(".") for part in path.relative_to(base).parts):
+                    continue
+                # .gitignore 排除的条目（业绩库、封存答案等）同样不进公开包
+                if is_ignored(path.relative_to(ROOT).as_posix(), ignore):
                     continue
                 zf.write(path, path.relative_to(ROOT).as_posix())
         for name in include_files:
@@ -228,6 +274,7 @@ def build_zip(out: Path) -> Path:
     leaked = [
         n for n in names
         if "cards.full" in n or re.search(r"-(?:wal|shm|journal)$", n)
+        or is_ignored(n, list(ALWAYS_EXCLUDE))
     ]
     if leaked:
         target.unlink(missing_ok=True)

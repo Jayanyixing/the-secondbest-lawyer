@@ -6,18 +6,23 @@
 
 1. 先读本目录的 `SKILL.md`（入口：定位、工作五则、路由表、期限口径、交付限制）。
 2. 按用户任务，从 `references/` 只加载对应模块：主模块 1 个 + 补充模块最多 2 个（`citation.md` 常驻，不占额度）：
-   - 检索与引用：`01-legal-research.md` + `citation.md`
+   - 复杂任务总控：`00-chief.md`
+   - 检索与引用：`01-legal-research.md` + `citation.md`（本地检索优先用 `python3 tools/lawdb.py search "关键词"`）
    - 民商诉讼：`02-civil-litigation.md`
    - 刑事：`03-criminal-defense.md`
    - 证据与庭审：`04-evidence-trial.md`
    - 合同与顾问：`05-contract-counsel.md`
    - 尽调：`06-corporate-due-diligence.md`
    - 财产与执行：`07-assets-enforcement.md`
-   - 投标：`08-law-firm-tender.md`
+   - 投标：`08-law-firm-tender.md`、`08a-legal-service-bid.md`
    - 期限与联络：`09-case-operations.md`
    - 复核：`10-legal-quality.md`
-   - 范围外：`scope.md`（命中行政、婚家、破产、知产实体、涉税、涉外等先读它；劳动人事已由 14 模块覆盖，边界见 `14-labor.md`）
-3. 交付前读 `references/checklist.md`，有条件时跑 `python3 tools/citation_lint.py`。
+   - 客户沟通与结案：`11-client-practice.md`
+   - 国标／行标／团标：`12-standards.md`
+   - 程序动作与紧急模式：`13-procedure-actions.md`
+   - 劳动人事：`14-labor.md`
+   - 范围外：`scope.md`（命中行政、婚家、破产、知产实体、涉税、涉外等先读它）
+3. 交付前读 `references/checklist.md`，有条件时跑 `python3 tools/citation_lint.py`（加 `--verify-db` 可与本地法条／卡片库交叉核对摘录），需要 Word 交付物时用 `python3 tools/docgen.py`（支持 `complaint`／`defense`／`preservation`／`evidence`／`risk`）。
 
 ## 无论哪个宿主都必须遵守的三条
 

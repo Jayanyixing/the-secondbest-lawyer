@@ -28,9 +28,12 @@ def main(argv: list[str]) -> int:
     cases = json.loads(cases_path.read_text(encoding="utf-8"))
     passed = failed = 0
     for c in cases:
-        r = subprocess.run(["python3", "tools/lawdb.py", "card-query", *c["q"], "--limit", "3"],
-                           cwd=ROOT, capture_output=True, text=True)
-        ok = c["expect"] in r.stdout
+        r = subprocess.run([sys.executable, str(ROOT / "tools" / "lawdb.py"), "card-query", *c["q"],
+                            "--limit", "3"],
+                           cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+        # 未命中时 card-query 退出 1 并回显查询词；expect 常与查询词相同，
+        # 只看 stdout 会把「未命中卡片：追加 被执行人」误判为命中，所以先看退出码。
+        ok = r.returncode == 0 and c["expect"] in r.stdout
         if ok:
             passed += 1
         else:

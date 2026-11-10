@@ -23,6 +23,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LAW_DB = ROOT / "data" / "law.sqlite"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lawdb import normalize_article_no  # noqa: E402
 
 # tags 首项 → 案由关键词族；首项与案由必须同族，否则说明标签比案由还粗
 # 只做「同族/不同族」判断，不追求字面相等：商品房预售合同纠纷属于买卖族，
@@ -47,7 +49,10 @@ TAG2CAUSE = {
 # 语义越界的可疑措辞：条文里没有的前提，key_point 却写成硬条件
 OVERCLAIM = ("必须以", "须以", "一律", "均须", "前提是", "必然", "一定")
 
-CASE_RE = re.compile(r"^(.*?)(第[零〇一二三四五六七八九十百千两\d]+条(?:之[一二三四五六七八九十]+)?)$")
+CASE_RE = re.compile(
+    r"^(.*?)(第[零〇一二三四五六七八九十百千两\d]+条(?:之[一二三四五六七八九十\d]+)?)"
+    r"(?:第[零〇一二三四五六七八九十百千两\d]+[款项])*$"
+)
 ART_PREFIX_RE = re.compile(r"^第[零〇一二三四五六七八九十百千两\d]+条(?:之[一二三四五六七八九十]+)?[\s\u3000]*")
 
 
@@ -75,25 +80,39 @@ def load_articles() -> dict[str, dict[str, str]]:
     return out
 
 
-def find_article(articles: dict[str, dict[str, str]], law_hint: str, no: str):
-    """容忍《民法典》与《中华人民共和国民法典》这类简称差异。"""
+def find_law(articles: dict[str, dict[str, str]], law_hint: str) -> str | None:
+    """先按法名定位，不看条号——否则条号写错时会被当成「库里没有这部法」而漏报。
+
+    容忍《民法典》与《中华人民共和国民法典》这类简称差异：
+    - 完全相等 > 法名包含简称 > 简称包含法名；
+    - 「法名包含简称」同分时取**最短**的（《民法典》→ 民法典本身，而不是某部民法典解释）；
+    - 「简称包含法名」同分时取最长的（离简称最近）。
+    """
     hint = norm_law(law_hint)
-    best, score = None, 0
-    for name, arts in articles.items():
+    if not hint:
+        return None
+    best, best_key = None, None
+    for name in articles:
         norm_name = norm_law(name)
-        if not hint or no not in arts:
-            continue
         if norm_name == hint:
-            s_ = 3
+            key = (3, 0)
         elif hint in norm_name:
-            s_ = 2
+            key = (2, -len(norm_name))
         elif norm_name in hint:
-            s_ = 1
+            key = (1, len(norm_name))
         else:
             continue
-        if s_ > score or (s_ == score and best and len(name) > len(best)):
-            best, score = name, s_
-    return (best, articles[best][no]) if best else (None, None)
+        if best_key is None or key > best_key:
+            best, best_key = name, key
+    return best
+
+
+def find_article(articles: dict[str, dict[str, str]], law_hint: str, no: str):
+    """返回 (法名, 条文)；法找到但无此条时条文为 None，法都找不到时两者皆 None。"""
+    name = find_law(articles, law_hint)
+    if name is None:
+        return None, None
+    return name, articles[name].get(no)
 
 
 def main(argv: list[str]) -> int:
@@ -108,10 +127,6 @@ def main(argv: list[str]) -> int:
         "SELECT id, case_no, issues, holding, quote, kind FROM cards WHERE kind='rule'"
     ).fetchall()
 
-    PLACEHOLDER = ("见 tags", "见tags", "待定", "TODO", "TBD", "?")
-    placeholders = conn.execute(
-        "SELECT id, case_no, cause FROM cards WHERE trim(cause) IN (%s)"
-        % ",".join("?" * len(PLACEHOLDER)), PLACEHOLDER).fetchall() if False else []
     misplaced, missing, no_article, ok = [], [], [], 0
     for cid, no_, issues, holding, quote, kind in rows:
         m = CASE_RE.search((no_ or "").strip())
@@ -119,18 +134,18 @@ def main(argv: list[str]) -> int:
             # 会议纪要、指导意见、典型案例本来就没有条号，不属于"校验失败"
             no_article.append((cid, no_))
             continue
-        law, art_no = m.group(1).strip(), m.group(2)
+        law, art_no = m.group(1).strip(), normalize_article_no(m.group(2))
         law = law.strip("《》〈〉") if law.count("《") <= 1 else law.strip("《》")
         name, text = find_article(articles, law, art_no)
-        if text is None:
-            missing.append((cid, no_, f"库中找不到 {law} {art_no}"))
+        if name is None:
+            missing.append((cid, no_, f"库中找不到 {law}"))
             continue
         q = norm(quote)
         q = ART_PREFIX_RE.sub("", q)
-        if q and q in text:
+        if text is not None and q and q in text:
             ok += 1
             continue
-        # 引文不在声称的条里——去同一部法的其他条找
+        # 引文不在声称的条里（或该法根本没有这一条）——去同一部法的其他条找
         hit = next((k for k, v in articles.get(name, {}).items() if q and q in v), None)
         misplaced.append((cid, no_, hit))
 

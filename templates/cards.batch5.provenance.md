@@ -6,15 +6,15 @@
 
 | 快照文件 | 字数 | sha256(前16位) | 来源 |
 | --- | --- | --- | --- |
-| snap-2026-11-08-csj典型案例.txt | 44772 | 6f763a259b59909b | https://www.court.gov.cn/zixun/xiangqing/400542.html |
+| snap-2026-11-08-csj典型案例.txt | 44664 | 6053eec2a3709e2b | https://www.court.gov.cn/zixun/xiangqing/400542.html |
 | snap-2026-11-08-xunhui1质量异议.txt | 5226 | fd72169d9b79c438 | https://www.court.gov.cn/xunhui1/xiangqing/282341.html |
 
 ## 逐卡核验
 
 | 条号 | kind | 字数 | 快照 | 偏移 | 命中 | 前置上下文 |
 | --- | --- | --- | --- | --- | --- | --- |
-| （2018）浙0281民初XXX号 | judgment | 45 | snap-2026-11-08-csj典型案例.txt | 9039 | ✓ | 际损失/公平原则裁判要旨1. |
-| （2018）浙0281民初XXX号 | judgment | 59 | snap-2026-11-08-csj典型案例.txt | 9179 | ✓ | 为其已经完成了房屋交付。2. |
+| （2018）浙0281民初XXX号 | judgment | 45 | snap-2026-11-08-csj典型案例.txt | 8984 | ✓ | 际损失/公平原则裁判要旨1. |
+| （2018）浙0281民初XXX号 | judgment | 59 | snap-2026-11-08-csj典型案例.txt | 9124 | ✓ | 为其已经完成了房屋交付。2. |
 | 最高人民法院第一巡回法庭法官会议纪要（合 | rule | 26 | snap-2026-11-08-xunhui1质量异议.txt | 980 | ✓ | 不符合约定的情形通知出卖人。 |
 
 ## 复算方法

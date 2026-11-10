@@ -576,8 +576,8 @@ def cmd_stats(args) -> int:
 CARD_FIELDS = ["case_no", "cause", "issues", "holding", "our_side", "key_point", "quote", "source", "tags"]
 CASE_NO_RE = re.compile(
     r"^(?:"
-    r"[（(](?:19|20)\d{2}[）)][^\s]{2,30}号"                    # 法院：（2024）京03民终16167号
-    r"|[^\s]{2,20}[［\[（(](?:19|20)\d{2}[］\]）)][^\s]{0,20}号"  # 仲裁：京朝劳人仲字［2022］第27149号
+    r"[（(](?:19|20)\d{2}[）)][^\s]{2,30}号"                    # 法院：（2024）京03民终16XXX号
+    r"|[^\s]{2,20}[［\[（(](?:19|20)\d{2}[］\]）)][^\s]{0,20}号"  # 仲裁：京朝劳人仲字［2022］第20XXX号
     r")$"
 )
 MASK_RE = re.compile(r"[XxＸｘ＊*]")
@@ -669,10 +669,20 @@ def cmd_card_add(args) -> int:
         conn.execute(
             """INSERT INTO cards(case_no,cause,issues,holding,our_side,key_point,source,quote,tags,created_at,verify_status,kind)
                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (r.get("case_no"), r.get("cause"), r.get("issues"), r.get("holding"), r.get("our_side"),
-             r.get("key_point"), r.get("source"), r.get("quote"), r.get("tags"),
-             r.get("created_at") or date.today().isoformat(),
-             r.get("verify_status") or "pending", r.get("kind") or "judgment"),
+            (
+                str(r.get("case_no") or "").strip(),
+                str(r.get("cause") or "").strip(),
+                str(r.get("issues") or "").strip(),
+                str(r.get("holding") or "").strip(),
+                str(r.get("our_side") or "").strip(),
+                str(r.get("key_point") or "").strip(),
+                str(r.get("source") or "").strip(),
+                str(r.get("quote") or "").strip(),
+                str(r.get("tags") or "").strip(),
+                str(r.get("created_at") or "").strip() or date.today().isoformat(),
+                str(r.get("verify_status") or "").strip() or "pending",
+                str(r.get("kind") or "").strip() or "judgment",
+            ),
         )
         inserted += 1
     conn.commit()
@@ -860,6 +870,7 @@ def cmd_verify(args) -> int:
             path = (ROOT / path).resolve()
         if not path.exists():
             miss += 1
+            print(f"  ✗ 文件缺失：{name}（{file_name}）")
             continue
         if hashlib.sha256(path.read_bytes()).hexdigest() == sha:
             ok += 1
@@ -867,17 +878,40 @@ def cmd_verify(args) -> int:
             bad += 1
             print(f"  ✗ 已变更：{name}（{file_name}）——需重新导入并复查引用")
     print(f"一致性：一致 {ok}／文件缺失 {miss}／内容变更 {bad}")
-    return 1 if bad else 0
+    return 1 if (bad or miss) else 0
+
+
+def cmd_search(args) -> int:
+    """一次调用同时检索本地法条库与卡片库。"""
+    from types import SimpleNamespace
+    law_db = args.db if args.db else DEFAULT_DB
+    card_db = getattr(args, "cards_db", None) or CARDS_DB
+    print("=== 一、法条检索 ===")
+    q_args = SimpleNamespace(
+        db=law_db, keyword=args.keyword, law=getattr(args, "law", None),
+        limit=args.limit, json=False,
+    )
+    rc_law = cmd_query(q_args) if Path(law_db).exists() else 1
+    print("\n=== 二、结案卡片检索 ===")
+    c_args = SimpleNamespace(
+        db=card_db, keyword=args.keyword, limit=args.limit,
+        status=getattr(args, "status", None) or "verified",
+        kind=getattr(args, "kind", None),
+    )
+    rc_card = cmd_card_query(c_args) if Path(card_db).exists() else 1
+    return 0 if (rc_law == 0 or rc_card == 0) else 1
 
 
 def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(description="本地法条库")
-    ap.add_argument("--db", type=Path, default=DEFAULT_DB)
+    db_parent = argparse.ArgumentParser(add_help=False)
+    db_parent.add_argument("--db", type=Path, default=argparse.SUPPRESS, help="指定 SQLite 数据库路径")
+
+    ap = argparse.ArgumentParser(description="本地法条库与结案卡片库", parents=[db_parent])
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("init", help="初始化数据库").set_defaults(func=cmd_init)
+    sub.add_parser("init", help="初始化数据库", parents=[db_parent]).set_defaults(func=cmd_init)
 
-    p = sub.add_parser("import", help="导入法规文件")
+    p = sub.add_parser("import", help="导入法规文件", parents=[db_parent])
     p.add_argument("files", nargs="+")
     p.add_argument("--name")
     p.add_argument("--issuer")
@@ -892,23 +926,32 @@ def main(argv: list[str]) -> int:
     p.add_argument("--date")
     p.set_defaults(func=cmd_import)
 
-    q = sub.add_parser("query", help="全文检索")
+    q = sub.add_parser("query", help="全文检索", parents=[db_parent])
     q.add_argument("keyword", nargs="+", help="一个或多个关键词（自动按 AND 组合）")
     q.add_argument("--law")
     q.add_argument("--limit", type=int, default=5)
     q.add_argument("--json", action="store_true")
     q.set_defaults(func=cmd_query)
 
-    a = sub.add_parser("article", help="按条号取原文")
+    s = sub.add_parser("search", help="同时检索法条库与结案卡片库", parents=[db_parent])
+    s.add_argument("keyword", nargs="+", help="一个或多个关键词（自动按 AND 组合）")
+    s.add_argument("--law", help="限定法规名")
+    s.add_argument("--cards-db", type=Path, default=CARDS_DB, help="指定卡片库路径")
+    s.add_argument("--limit", type=int, default=5)
+    s.add_argument("--status", choices=["verified", "pending"], default="verified")
+    s.add_argument("--kind", choices=["judgment", "rule"])
+    s.set_defaults(func=cmd_search)
+
+    a = sub.add_parser("article", help="按条号取原文", parents=[db_parent])
     a.add_argument("law")
     a.add_argument("no", help="如 第五百八十五条")
     a.set_defaults(func=cmd_article)
 
-    sd = sub.add_parser("seed", help="按 data/manifest.json 批量导入")
+    sd = sub.add_parser("seed", help="按 data/manifest.json 批量导入", parents=[db_parent])
     sd.add_argument("--manifest", default=str(ROOT / "data" / "manifest.json"))
     sd.set_defaults(func=cmd_seed)
 
-    ca = sub.add_parser("card-add", help="登记结案卡片")
+    ca = sub.add_parser("card-add", help="登记结案卡片", parents=[db_parent])
     ca.add_argument("--file", help="JSON 文件（单条或数组）")
     ca.add_argument("--case-no"); ca.add_argument("--cause"); ca.add_argument("--issues")
     ca.add_argument("--holding"); ca.add_argument("--our-side"); ca.add_argument("--key-point")
@@ -917,38 +960,37 @@ def main(argv: list[str]) -> int:
     ca.add_argument("--kind", choices=["judgment", "rule"], default="judgment", help="judgment 判例卡 / rule 规则卡")
     ca.set_defaults(func=cmd_card_add)
 
-    cq = sub.add_parser("card-query", help="检索卡片")
+    cq = sub.add_parser("card-query", help="检索卡片", parents=[db_parent])
     cq.add_argument("keyword", nargs="+", help="一个或多个关键词（自动 AND）")
     cq.add_argument("--limit", type=int, default=5)
     cq.add_argument("--status", choices=["verified", "pending"], help="只看已核／待核")
     cq.add_argument("--kind", choices=["judgment", "rule"], help="只看判例卡／规则卡")
     cq.set_defaults(func=cmd_card_query)
 
-    ce = sub.add_parser("card-export", help="导出卡片 JSON（可入库／备份）")
+    ce = sub.add_parser("card-export", help="导出卡片 JSON（可入库／备份）", parents=[db_parent])
     ce.add_argument("--out", default=str(ROOT / "data" / "cards.json"))
     ce.set_defaults(func=cmd_card_export)
 
-    cr = sub.add_parser("card-review", help="批量复核 pending 卡（对照快照/本地库）")
+    cr = sub.add_parser("card-review", help="批量复核 pending 卡（对照快照/本地库）", parents=[db_parent])
     cr.add_argument("--snapshots", default=str(ROOT / "templates" / "snapshots"))
     cr.set_defaults(func=cmd_card_review)
 
-    cv = sub.add_parser("card-verify", help="标记摘录核验状态")
+    cv = sub.add_parser("card-verify", help="标记摘录核验状态", parents=[db_parent])
     cv.add_argument("--case-no", required=True, help="案号（支持模糊匹配）")
     cv.add_argument("--issues", help="限定争点关键词")
     cv.add_argument("--status", choices=["verified", "pending"], default="verified")
     cv.set_defaults(func=cmd_card_verify)
 
-    cl = sub.add_parser("card-list", help="卡片列表")
+    cl = sub.add_parser("card-list", help="卡片列表", parents=[db_parent])
     cl.add_argument("--limit", type=int, default=10)
     cl.set_defaults(func=cmd_card_list)
 
-    sub.add_parser("stats", help="库概况").set_defaults(func=cmd_stats)
-    sub.add_parser("verify", help="校验导入文件与库内哈希").set_defaults(func=cmd_verify)
+    sub.add_parser("stats", help="库概况", parents=[db_parent]).set_defaults(func=cmd_stats)
+    sub.add_parser("verify", help="校验导入文件与库内哈希", parents=[db_parent]).set_defaults(func=cmd_verify)
 
     args = ap.parse_args(argv)
-    # 卡片含当事人信息：默认写独立库，避免随仓库外泄
-    if args.cmd.startswith("card") and "--db" not in argv:
-        args.db = CARDS_DB
+    if not hasattr(args, "db") or args.db is None:
+        args.db = CARDS_DB if args.cmd.startswith("card") else DEFAULT_DB
     return args.func(args)
 
 

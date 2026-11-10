@@ -77,12 +77,12 @@ def probes() -> int:
 
         def t_matrix_id_and_short() -> None:
             src = td / "tender.md"
-            src.write_text("一、投标人必须提供有效的营业执照副本。\n★不得转包。\n", encoding="utf-8")
+            src.write_text("一、投标人必须提供有效的营业执照副本。\n（二）投标人须具备执业许可证。\n1.1 投标人应当配备专职团队。\n★不得转包。\n", encoding="utf-8")
             code, out = run_tool("tender_matrix.py", str(src), "--json")
             assert code == 0, out[-500:]
             data = json.loads(out)
             ids = [r["采购编号"] for r in data["rows"]]
-            assert "一" in ids, ids
+            assert "一" in ids and "二" in ids and "1.1" in ids, ids
             assert any("★不得转包" in r["要求原文"] for r in data["rows"]), data["rows"]
 
         check("matrix 中文序号 + 短强条款", t_matrix_id_and_short)
@@ -108,12 +108,21 @@ def probes() -> int:
             )
             code, out = run_tool("tender_consistency.py", str(src))
             assert "C6" in out and code == 1, out[-800:]
+            # 含小计+合计的自洽表不应误报，合计错时仍能抓出
+            sub_ok = td / "c6_sub_ok.md"
+            sub_ok.write_text(
+                "| 项目 | 金额（元） |\n|---|---|\n"
+                "| 甲 | 300 |\n| 小计 | 300 |\n| 乙 | 400 |\n| 合计 | 700 |\n",
+                encoding="utf-8",
+            )
+            code_ok, out_ok = run_tool("tender_consistency.py", str(sub_ok))
+            assert code_ok == 0 and "C6" not in out_ok, out_ok
 
         check("consistency C6 金额列与合计", t_c6_amount_col)
 
         def t_c1_clause() -> None:
             src = td / "c1.md"
-            src.write_text("违约金 5 万元；合同总价壹佰万元整。\n", encoding="utf-8")
+            src.write_text("违约金 5 万元；合同总价壹佰万元整。另有零星费用 100.05 元（大写：壹佰元零伍分）。\n", encoding="utf-8")
             code, out = run_tool("tender_consistency.py", str(src))
             assert "[错误] C1" not in out, out[-800:]
             assert code == 0, out[-800:]
@@ -176,6 +185,8 @@ def probes() -> int:
             data = json.loads(out)
             assert data["价格分"] == 30, data["价格分"]
             assert "已去极值" in data["基准价口径"], data["基准价口径"]
+            same_rivals = [r["价格分"] for r in data["对手"] if r["报价"] == 100]
+            assert same_rivals == [30.0, 30.0, 30.0], f"同价对手去极值池被误删：{same_rivals}"
 
         check("score 5 家去极值", t_score_trim)
 

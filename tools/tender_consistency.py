@@ -37,7 +37,7 @@ def docx_text(path: Path) -> str:
             xml = z.read("word/document.xml").decode("utf-8", "ignore")
         except KeyError:
             return ""
-    xml = re.sub(r"</w:p>", "\n", xml)
+    xml = re.sub(r"</w:p>|<w:(?:br|cr)\b[^>]*/?>", "\n", xml)
     xml = re.sub(r"<w:tab[^>]*/>", "\t", xml)
     xml = re.sub(r"<[^>]+>", "", xml)
     return xml.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
@@ -110,12 +110,14 @@ CN_DIGITS = {"零": 0, "〇": 0, "壹": 1, "贰": 2, "叁": 3, "肆": 4, "伍": 
              "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "两": 2}
 SMALL_UNITS = {"拾": 10, "十": 10, "佰": 100, "百": 100, "仟": 1000, "千": 1000}
 CN_CHARS = "".join(CN_DIGITS) + "".join(SMALL_UNITS) + "万亿"
-CN_RE = re.compile(rf"[{CN_CHARS}]{{1,20}}元(?:[{''.join(CN_DIGITS)}]角)?(?:[{''.join(CN_DIGITS)}]分)?(?:整)?")
+_CN_D = "".join(CN_DIGITS)
+# 元/圆后允许「零X角」「零X分」「整/正」：壹佰元零伍分、壹佰圆零伍角、壹佰元整
+CN_RE = re.compile(rf"[{CN_CHARS}]{{1,20}}[元圆](?:零?[{_CN_D}]角)?(?:零?[{_CN_D}]分)?(?:[整正])?")
 NUM_RE = re.compile(r"(?:人民币|￥|¥|RMB)?\s*([0-9][0-9,，]*(?:\.[0-9]{1,2})?)\s*(万元|万|元)")
 
 
 def cn_to_yuan(s: str) -> float | None:
-    head, sep, tail = s.partition("元")
+    head, sep, tail = s.replace("圆", "元").partition("元")
     if not sep:
         return None
     total = section = num = 0
@@ -133,10 +135,10 @@ def cn_to_yuan(s: str) -> float | None:
             section = num = 0
     value = float(total + section + num)
     frac = 0.0
-    m = re.match(rf"([{''.join(CN_DIGITS)}])角", tail)
+    m = re.search(rf"([{_CN_D}])角", tail)
     if m:
         frac += CN_DIGITS[m.group(1)] * 0.1
-    m = re.search(rf"([{''.join(CN_DIGITS)}])分", tail)
+    m = re.search(rf"([{_CN_D}])分", tail)
     if m:
         frac += CN_DIGITS[m.group(1)] * 0.01
     return round(value + frac, 2)
@@ -284,12 +286,13 @@ def check_table_totals(path: Path, text: str, f: Findings) -> None:
                 amount_cols = [i for i in numeric
                                if i < len(header) and any(k in header[i] for k in AMOUNT_HEADER_KW)]
                 col = amount_cols[-1] if amount_cols else numeric[-1]
-                section: list[tuple[str, float]] = []
+                section: list[float] = []     # 上一个小计/合计之后的分项
+                subtotals: list[float] = []   # 上一个合计之后出现的小计
 
-                def compare(label: str, total_value: float, kind: str) -> None:
-                    if not section:
+                def compare(label: str, total_value: float, parts: list[float], kind: str) -> None:
+                    if not parts:
                         return
-                    s = sum(v for _, v in section)
+                    s = sum(parts)
                     if abs(s - total_value) > 0.01:
                         f.add("错误", "C6",
                               f"「{label}」{total_value:.2f}（{kind}）与分项之和 {s:.2f} 不符"
@@ -304,11 +307,16 @@ def check_table_totals(path: Path, text: str, f: Findings) -> None:
                     assert value is not None
                     is_sub = any(any(k in c for k in SUBTOTAL_LABELS) for c in r[:2])
                     is_total = any(any(k in c for k in TOTAL_LABELS) for c in r[:2])
-                    if is_sub or is_total:
-                        compare(label, value, "小计" if is_sub and not is_total else "合计")
+                    if is_total:
+                        # 合计 = 各小计 + 最后一个小计之后未归组的分项
+                        compare(label, value, subtotals + section, "合计")
+                        section, subtotals = [], []
+                    elif is_sub:
+                        compare(label, value, section, "小计")
+                        subtotals.append(value)
                         section = []
                     else:
-                        section.append((label, value))
+                        section.append(value)
         block, start_line = [], 0
 
     for lineno, line in enumerate(text.splitlines(), 1):

@@ -45,17 +45,21 @@ def run_probes(lint_path: Path, docgen_path: Path) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         td = Path(tmp)
 
-        # 1. load_ledger_md 表头含「官方复核」不污染「来源渠道」
+        # 1. load_ledger_md 表头含「官方复核」不污染「来源渠道」，且兼容英文枚举与「条号」列
         def t1():
             md = td / "ledger1.md"
             md.write_text(
-                "| 编号 | 类型 | 文号 | 来源渠道 | 定位 | 读取范围 | 摘录 | 回读 | 官方复核 | 规范效力 | 适用时点 |\n"
-                "|---|---|---|---|---|---|---|---|---|---|---|\n"
-                "| N-01 | 法规 | 第五百八十五条 | 商业库 | 第五百八十五条 | 全文 | 当事人可以约定一方违约时应当根据违约情况向对方支付一定数额的违约金 | 已回读(2026-05-01) | 未核 | 现行有效 | 2026 |\n",
+                "| 编号 | 类型 | 条号 | 来源渠道 | 定位 | 读取范围 | 摘录 | 回读 | 官方复核 | 生效 | 规范效力 | 适用时点 |\n"
+                "|---|---|---|---|---|---|---|---|---|---|---|---|\n"
+                "| N-01 | 法规 | 第五百八十五条 | 商业库 | 第五百八十五条 | 全文 | 当事人可以约定一方违约时应当根据违约情况向对方支付一定数额的违约金 | 已回读(2026-05-01) | 未核 | effective | 现行有效 | 2026 |\n"
+                "| N-02 | 法规 | 第五百八十六条 | official | https://flk.npc.gov.cn/detail2.html?x | full | 当事人可以约定一方向对方给付定金作为债权的担保 | 已回读(2026-05-01) | verified | effective | current | 2026 |\n",
                 encoding="utf-8",
             )
             entries = cl.load_ledger_md(md)
             assert entries[0]["channel"] == "commercial", f"期望 commercial，实得 {entries[0]['channel']}"
+            assert entries[0]["number"] == "第五百八十五条", f"条号列未识别：{entries[0]['number']}"
+            assert entries[0]["effectiveness"] == "effective", f"英文 effective 被抹掉：{entries[0]['effectiveness']}"
+            assert entries[1]["channel"] == "official" and entries[1]["read_scope"] == "full"
 
         check("1. [citation_lint] load_ledger_md 表头『官方复核』不污染渠道列", t1)
 
@@ -93,7 +97,7 @@ def run_probes(lint_path: Path, docgen_path: Path) -> int:
                         "reread": "已回读(2026-05-01)", "norm_status": "current", "apply_time": "2026",
                     },
                     {
-                        "id": "C-02", "type": "案例", "number": "（2024）京01民终999号",
+                        "id": "C-02", "type": "案例", "number": "（2024）京01民终99X号",
                         "location": "裁判文书网", "read_scope": "abstract",
                         "official_check": "unverified", "channel": "commercial",
                         "quote": "", "reread": "",
@@ -109,7 +113,7 @@ def run_probes(lint_path: Path, docgen_path: Path) -> int:
                 "| 编号 | 名称 | 读取范围 | 摘录 | 回读 |\n"
                 "|---|---|---|---|---|\n"
                 "| N-01 | 民法典585条 | 全文 | 当事人可以约定一方违约时应当根据违约情况向对方支付一定数额的违约金 | 已回读(2026-05-01) |\n"
-                "| C-02 | （2024）京01民终999号 | 摘要 | 仅读摘要未取全文 | 未回读 |\n",
+                "| C-02 | （2024）京01民终99X号 | 摘要 | 仅读摘要未取全文 | 未回读 |\n",
                 encoding="utf-8",
             )
             rep = cl.lint(body, ledger, "self", False)
@@ -119,16 +123,34 @@ def run_probes(lint_path: Path, docgen_path: Path) -> int:
             assert not r3, f"底稿表自身定义行不应触发 R3：{r3}"
             assert r10, f"正文未引用的 C-02 应触发 R10 警告，实得 warnings={rep.warnings}"
             assert r12_err, f"正文未出现摘录（仅底稿表有）应报 R12 错误而非降级警告，实得 errors={rep.errors}"
+            # 内联表显式带「规范效力」列时，应被 load_ledger_inline 识别
+            inline_doc = td / "body3_inline.md"
+            inline_doc.write_text(
+                "# 意见〔自查〕\n依 [N-01] 处理。\n\n## 引用底稿\n"
+                "| 编号 | 摘录 | 规范效力 |\n|---|---|---|\n"
+                "| N-01 民法典585条 | 当事人可以约定一方违约时应当根据违约情况向对方支付一定数额的违约金 | 现行有效 |\n",
+                encoding="utf-8",
+            )
+            rep_in = cl.lint(inline_doc, None, "self", False)
+            assert not any("未登记「规范效力」" in w for w in rep_in.warnings), rep_in.warnings
 
         check("3. [citation_lint] 排除文末内联引用底稿表干扰（R3/R10/R12）", t3)
 
-        # 4. 自查模式写「未经复核」不触发 R9 错误
+        # 4. 自查模式写「未经复核」不触发 R9，否定语境不触发 R4/R6，商业库写词表外否定不报 R18
         def t4():
             body = td / "body4.md"
-            body.write_text("# 咨询意见〔自查〕\n本稿已完成自查，未经复核（未做独立核验）。\n", encoding="utf-8")
+            body.write_text(
+                "# 咨询意见〔自查〕\n"
+                "本稿已完成自查，未经复核（未做独立核验），不能写成「不存在任何债务」，本所不承诺保证胜诉。\n",
+                encoding="utf-8",
+            )
             rep = cl.lint(body, None, "self", False)
             r9 = [e for e in rep.errors if "[R9]" in e]
+            r6 = [e for e in rep.errors if "[R6]" in e]
             assert not r9, f"否定句『未经复核』不应报 R9：{r9}"
+            assert not r6, f"否定句不应报 R6：{r6}"
+            assert cl.check_allowed_for_channel("未经官方核实", "commercial", "") is True
+            assert cl.check_allowed_for_channel("基本核实", "user_export", "https://www.court.gov.cn/a.html") is False
 
         check("4. [citation_lint] R9 识别『未经复核／未做独立核验』否定语境", t4)
 
@@ -195,14 +217,17 @@ def run_probes(lint_path: Path, docgen_path: Path) -> int:
 
         check("7. [citation_lint] 大小写端口 URL 解析与 R19 计数边界", t7)
 
-        # 8. docgen 过滤 XML 非法控制字符（如 \x0c 换页符）
+        # 8. docgen 过滤 XML 非法控制字符（如 \x0c 换页符）且兼容字符串入参
         def t8():
             out_docx = td / "t8.docx"
-            blocks = dg.tpl_complaint({"facts": ["第一页内容\x0c第二页内容\x07"]})
+            blocks = dg.tpl_complaint({"plaintiff": "原告甲公司", "facts": ["第一页内容\x0c第二页内容\x07"]})
             dg.build_docx(blocks, out_docx)
             with zipfile.ZipFile(out_docx) as zf:
                 xml_bytes = zf.read("word/document.xml")
             ET.fromstring(xml_bytes)  # 含 \x0c 或 \x07 时直接抛 ParseError
+            assert "原告：原告甲公司" in "".join(blocks), "单字符串 plaintiff 被逐字拆碎"
+            risk_blocks = dg.tpl_risk({"risks": ["一、证据不足风险"]})
+            assert "一、证据不足风险" in "".join(risk_blocks)
 
         check("8. [docgen] 过滤 \\x0c 等非法控制字符，确保生成的 XML 合法", t8)
 

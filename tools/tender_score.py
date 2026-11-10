@@ -129,8 +129,10 @@ def main(argv: list[str]) -> int:
     our_total = ours_price + self_other
 
     rivals = []
-    for o in others:
-        ps = price_score(o, [our] + [x for x in others if x != o], full, method, args.k, trim_cfg)
+    for idx, o in enumerate(others):
+        # 按位置剔除自己：同价对手不能被 x != o 一并删掉
+        pool = [our] + others[:idx] + others[idx + 1:]
+        ps = price_score(o, pool, full, method, args.k, trim_cfg)
         rivals.append({"报价": o, "价格分": ps, "总分": round(ps + rival_other, 2)})
     rivals.sort(key=lambda r: -r["总分"])
 

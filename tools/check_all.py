@@ -27,16 +27,24 @@ TOOLS = ROOT / "tools"
 DIST_ZIP = ROOT / "dist" / "the-secondbest-lawyer.zip"
 EXPECTED_EVAL_CASES = 12
 
-SENSITIVE_NAME_RE = re.compile(r"cards\.full|-(?:wal|shm|journal)$", re.I)
-# 真实案号：年份 + 法院代字 + 案件类型 + 数字号；带 X/×/＊/* 视为已脱敏。
-CASE_NO_RE = re.compile(
-    r"[（(]\s*(?:19|20)\d{2}\s*[）)]\s*[\u4e00-\u9fa5]{0,8}\d{0,8}\s*"
-    r"(?:民初|民终|民申|民再|民特|刑初|刑终|行初|行终|执异|执复|执|"
-    r"商初|知民初|破申|破|劳仲|仲裁)\s*\d+\s*号"
+SENSITIVE_NAME_RE = re.compile(
+    r"cards\.full|-(?:wal|shm|journal)$|(?:^|/)credits\.json$|(?:^|/)sealed/|BULK-GENERATION-PROMPT",
+    re.I,
 )
-MASK_RE = re.compile(r"[Xx×＊*]")
+# 真实案号：年份 + 法院代字 + 案件类型 + 数字号；数字号里带 X/×/＊/* 就匹配不上，即视为已脱敏。
+CASE_NO_RE = re.compile(
+    r"[（(〔\[]\s*(?:19|20)\d{2}\s*[）)〕\]]\s*[\u4e00-\u9fa5]{0,8}\d{0,8}\s*"
+    r"(?:民初|民终|民申|民再|民特|民辖|民撤|民监|刑初|刑终|刑申|刑更|行初|行终|行申|"
+    r"执异|执复|执恢|执保|执监|执|商初|知民初|知民终|知行初|破申|破|劳仲|仲裁|赔)\s*\d+\s*号"
+    # 仲裁：京朝劳人仲字［2022］第20XXX号
+    r"|[\u4e00-\u9fa5]{0,10}仲[\u4e00-\u9fa5]{0,3}字?\s*[［\[（(〔]\s*(?:19|20)\d{2}\s*[］\]）)〕]\s*第?\s*\d+\s*号"
+)
+MASK_RE = re.compile(r"[XxＸｘ×＊*]")
 # README 约定：指导案例、典型案例、公报案例、入库编号属于「来源编号」，不要求遮罩。
-PUBLIC_SOURCE_MARKERS = ("指导案例", "典型案例", "公报", "入库编号")
+PUBLIC_SOURCE_MARKERS = ("指导案例", "指导性案例", "典型案例", "参考案例", "公报", "入库编号")
+SENSITIVE_PARTY_RE = re.compile(
+    r"侯树启|张剑伦|崔洪波|高冬生|中人公司|广东中人|煜金桥|金都园林|玉桥街道|中外运"
+)
 
 
 @dataclass
@@ -141,13 +149,19 @@ def scan_zip(path: Path) -> list[str]:
 
 def _case_no_problems(label: str, text: str) -> list[str]:
     # 只拦「真实案号」；公报/指导/典型案例的来源编号按 README 约定可保留。
-    if any(marker in (text or "") for marker in PUBLIC_SOURCE_MARKERS):
-        return []
+    # 豁免按「每个命中」判断（命中本身或紧邻其前 16 字含来源标记），
+    # 不能因为同一字段里提到「典型案例」就把整段的真实案号一起放过。
+    text = text or ""
     out: list[str] = []
-    for match in CASE_NO_RE.finditer(text or ""):
+    for match in CASE_NO_RE.finditer(text):
         raw = match.group(0)
+        ctx = text[max(0, match.start() - 16):match.end()]
+        if any(marker in ctx for marker in PUBLIC_SOURCE_MARKERS):
+            continue
         if not MASK_RE.search(raw):
             out.append(f"{label} 出现未脱敏案号：{raw}")
+    for match in SENSITIVE_PARTY_RE.finditer(text):
+        out.append(f"{label} 出现未脱敏主体名称：{match.group(0)}")
     return out
 
 
@@ -214,7 +228,7 @@ def check_repo_dist(fast: bool) -> list[Result]:
     elapsed = time.perf_counter() - started
     if problems:
         return [Result("仓库分发包扫描", False, elapsed, "\n".join(problems[:8]))]
-    return [Result("仓库分发包扫描", True, elapsed, "无 cards.full / WAL / SHM / journal / 未脱敏案号")]
+    return [Result("仓库分发包扫描", True, elapsed, "无 cards.full / WAL / SHM / journal / credits / sealed / 未脱敏案号")]
 
 
 def check_tracked(fast: bool) -> Result:
@@ -230,11 +244,27 @@ def check_tracked(fast: bool) -> Result:
                       "git ls-files 失败；无法核验受跟踪文件")
     names = [n for n in proc.stdout.decode("utf-8", "replace").split("\0") if n]
     bad = [n for n in names if bad_name(n)]
+    content_problems: list[str] = []
+    for n in names:
+        if n == "tools/check_all.py":
+            continue
+        p = ROOT / n
+        if not p.is_file() or p.suffix in {".sqlite", ".zip", ".pdf", ".docx"}:
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        content_problems.extend(_case_no_problems(n, text))
     elapsed = time.perf_counter() - started
-    if bad:
-        return Result("跟踪文件敏感名扫描", False, elapsed,
-                      "受跟踪的敏感文件：\n" + "\n".join(bad[:8]))
-    return Result("跟踪文件敏感名扫描", True, elapsed, f"{len(names)} 个受跟踪文件，无敏感名")
+    if bad or content_problems:
+        details = []
+        if bad:
+            details.append("受跟踪的敏感文件：\n" + "\n".join(bad[:8]))
+        if content_problems:
+            details.append("受跟踪文件存在未脱敏内容：\n" + "\n".join(content_problems[:8]))
+        return Result("跟踪文件敏感名与脱敏扫描", False, elapsed, "\n".join(details))
+    return Result("跟踪文件敏感名与脱敏扫描", True, elapsed, f"{len(names)} 个受跟踪文件，无敏感名与未脱敏案号")
 
 
 def check_build() -> Result:
@@ -316,6 +346,11 @@ def main(argv: list[str]) -> int:
         else:
             results.append(Result("卡片检索回归", True, 0.0,
                                   "retrieval_check.py 不存在，跳过", skipped=True))
+        if (TOOLS / "card_health.py").is_file():
+            results.append(run_script(
+                "卡片库体检", TOOLS / "card_health.py",
+                r"规则卡 (\d+) 张：条号与引文一致 (\d+) 张",
+            ))
         results.append(check_build())
 
     results.extend(check_repo_dist(args.fast))

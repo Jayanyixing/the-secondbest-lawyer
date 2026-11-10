@@ -195,8 +195,8 @@ def test_card_query_short_synonym() -> None:
         conn = sqlite3.connect(db)
         conn.executescript(mod.CARDS_SCHEMA)
         rows = [
-            ("(2024)京01民终1号", "合同纠纷", "违约金是否过高", "约定违约金过高，应予调整"),
-            ("(2024)京01民终2号", "借款合同", "利息计算", "按LPR计付利息，逾期的加倍"),
+            ("(2024)京01民终1X号", "合同纠纷", "违约金是否过高", "约定违约金过高，应予调整"),
+            ("(2024)京01民终2X号", "借款合同", "利息计算", "按LPR计付利息，逾期的加倍"),
         ]
         for no, cause, issues, holding in rows:
             conn.execute(

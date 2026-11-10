@@ -160,19 +160,27 @@ def build_docx(blocks: list[str], out: Path) -> None:
 # ---------------------------------------------------------------- 模板
 
 
+def _as_list(val) -> list:
+    if val is None:
+        return []
+    if isinstance(val, str):
+        return [val] if val else []
+    return list(val)
+
+
 def tpl_complaint(d: dict) -> list[str]:
     b = [title(d.get("title", "民事起诉状")), blank()]
     for label, key in (("原告", "plaintiff"), ("被告", "defendant")):
-        for item in d.get(key, []):
+        for item in _as_list(d.get(key)):
             b.append(para(f"{label}：{item}", indent=False))
     b.append(para(f"案由：{d.get('cause', '【待补：案由】')}", indent=False))
     b.append(blank())
     b.append(heading("诉讼请求"))
-    for i, claim in enumerate(d.get("claims", []), start=1):
+    for i, claim in enumerate(_as_list(d.get("claims")), start=1):
         b.append(para(f"{i}. {claim}"))
     b.append(blank())
     b.append(heading("事实与理由"))
-    for p in d.get("facts", []):
+    for p in _as_list(d.get("facts")):
         b.append(para(p))
     b.append(blank())
     b.append(para(f"此致", indent=False))
@@ -183,7 +191,7 @@ def tpl_complaint(d: dict) -> list[str]:
     if d.get("attachments"):
         b.append(blank())
         b.append(heading("附件"))
-        for a in d["attachments"]:
+        for a in _as_list(d["attachments"]):
             b.append(para(a, indent=False))
     if d.get("note"):
         b.append(blank())
@@ -217,13 +225,16 @@ def tpl_risk(d: dict) -> list[str]:
     b.append(para(f"日期：{d.get('date', '【待补：日期】')}", indent=False))
     b.append(blank())
     b.append(heading("一、我们已了解的情况"))
-    for p in d.get("known", []):
+    for p in _as_list(d.get("known")):
         b.append(para(p))
     b.append(heading("二、主要风险"))
-    for item in d.get("risks", []):
-        b.append(para(f"{item.get('title', '')}　{item.get('body', '')}"))
+    for item in _as_list(d.get("risks")):
+        if isinstance(item, dict):
+            b.append(para(f"{item.get('title', '')}　{item.get('body', '')}"))
+        else:
+            b.append(para(str(item)))
     b.append(heading("三、我们的建议"))
-    for p in d.get("advice", []):
+    for p in _as_list(d.get("advice")):
         b.append(para(p))
     b.append(heading("四、需要您确认"))
     b.append(para(d.get("confirm", "上述风险与建议已阅读并理解，是否继续委托由委托人决定。")))
@@ -236,7 +247,70 @@ def tpl_risk(d: dict) -> list[str]:
     return b
 
 
-TEMPLATES = {"complaint": tpl_complaint, "evidence": tpl_evidence, "risk": tpl_risk}
+def tpl_preservation(d: dict) -> list[str]:
+    b = [title(d.get("title", "财产保全申请书")), blank()]
+    for label, key in (("申请人", "applicant"), ("被申请人", "respondent")):
+        items = _as_list(d.get(key)) or [f"【待补：{label}主体信息】"]
+        for item in items:
+            b.append(para(f"{label}：{item}", indent=False))
+    b.append(blank())
+    b.append(heading("申请事项"))
+    claims = _as_list(d.get("claims")) or [
+        f"请求依法查封、扣押、冻结被申请人名下价值人民币 {d.get('amount', '【待补：保全金额】')} 元的银行存款或相应价值的其他财产。"
+    ]
+    for i, claim in enumerate(claims, start=1):
+        b.append(para(f"{i}. {claim}"))
+    b.append(blank())
+    b.append(heading("事实与理由"))
+    for p in _as_list(d.get("facts")) or ["【待补：基础法律关系与紧迫性事实】"]:
+        b.append(para(p))
+    b.append(blank())
+    b.append(heading("担保与财产线索"))
+    b.append(para(f"担保方式：{d.get('security', '【待补：诉责险保函／银行保函／现金担保】')}"))
+    clues = _as_list(d.get("clues")) or ["【待补：被申请人银行账户、不动产、股权或车辆线索】"]
+    for i, clue in enumerate(clues, start=1):
+        b.append(para(f"线索 {i}：{clue}"))
+    b.append(blank())
+    b.append(para("此致", indent=False))
+    b.append(para(d.get("court", "【待补：受理法院】"), indent=False))
+    b.append(blank())
+    b.append(para(f"申请人：{d.get('signer', '【待补：签名或盖章】')}", align="right", indent=False))
+    b.append(para(d.get("date", "【待补：日期】"), align="right", indent=False))
+    return b
+
+
+def tpl_defense(d: dict) -> list[str]:
+    b = [title(d.get("title", "民事答辩状")), blank()]
+    b.append(para(f"案号：{d.get('case_no', '【待补：案号】')}", indent=False))
+    b.append(para(f"案由：{d.get('cause', '【待补：案由】')}", indent=False))
+    for item in _as_list(d.get("defendant")) or ["【待补：答辩人主体信息】"]:
+        b.append(para(f"答辩人：{item}", indent=False))
+    for item in _as_list(d.get("plaintiff")) or ["【待补：被答辩人／原告名称】"]:
+        b.append(para(f"被答辩人：{item}", indent=False))
+    b.append(blank())
+    b.append(heading("答辩请求"))
+    for i, req in enumerate(_as_list(d.get("requests")) or ["请求依法驳回原告的全部诉讼请求。"], start=1):
+        b.append(para(f"{i}. {req}"))
+    b.append(blank())
+    b.append(heading("事实与理由"))
+    for p in _as_list(d.get("arguments")) or ["【待补：答辩事实与法律依据】"]:
+        b.append(para(p))
+    b.append(blank())
+    b.append(para("此致", indent=False))
+    b.append(para(d.get("court", "【待补：受理法院】"), indent=False))
+    b.append(blank())
+    b.append(para(f"答辩人：{d.get('signer', '【待补：签名或盖章】')}", align="right", indent=False))
+    b.append(para(d.get("date", "【待补：日期】"), align="right", indent=False))
+    return b
+
+
+TEMPLATES = {
+    "complaint": tpl_complaint,
+    "evidence": tpl_evidence,
+    "risk": tpl_risk,
+    "preservation": tpl_preservation,
+    "defense": tpl_defense,
+}
 
 
 def main(argv: list[str]) -> int:
